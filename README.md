@@ -5,6 +5,6 @@
     2. for linux: `export GOOGLE_APPLICATION_CREDENTIALS="[PATH]"`
 2. install Google Cloud SDK from here: https://cloud.google.com/sdk/docs/
 3. Setup virtual environment, e.g. using `pipenv`  (`pip install pipenv`) - works on both windows and linux. See https://docs.pipenv.org/ for details
-4. Activate the environment using `pipenv install` and `pipenv shell` *in the directory of the repo*
+4. Activate the environment using `pipenv install` and `pipenv shell` _in the directory of the repo_
 5. Check that everything is working by doing `python -V` and `gcloud ml-engine models list`
 6. More information: https://cloud.google.com/ml-engine/docs/tensorflow/getting-started-training-prediction
