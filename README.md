@@ -1,4 +1,6 @@
-
+### Setting up:
+1. Install Google Cloud SDK from here: https://cloud.google.com/sdk/docs/
+2. Connect to VM (see below) and run `/home/shared/setup.sh && source ~/.bashrc`
 
 ### Connecting to a VM:
 1. `gcloud compute ssh --zone=europe-west1-b group27instance`
@@ -20,6 +22,11 @@
 2. Stop the group27instance
 
 ### HELP I'M STUCK
-Q: I cannot connect via ssh, it says "connection time-out"
+Q: I cannot connect via ssh, it says "connection time-out"  
 A: Most likely you haven't started the instance, see _Starting the instance_
+  
+Q: `jupyter-notebook` is command not found    
+A: you probably haven't run the setup scripts in /home/shared, see _Setting up_
+
+
 
