@@ -1,7 +1,7 @@
 ### Setting up:
 1. Install Google Cloud SDK from here: https://cloud.google.com/sdk/docs/
 2. Connect to VM (see below) and run `/home/shared/setup.sh && source ~/.bashrc`
-
+3. Also, run `jupyter notebook password` and set the password to group27password
 ### Connecting to a VM:
 1. `gcloud compute ssh --zone=europe-west1-b group27instance`
 2. go to shared directory: `cd /home/shared`. run jupyter-notebook: `jupyter-notebook --no-browser --port=7000`
