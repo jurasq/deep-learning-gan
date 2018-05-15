@@ -11,6 +11,7 @@
 ### Starting the instance:
 1. In the console in the browser, go to Compute Engine -> VM Instances;  
 2. Start the group27instance
+3. **Make sure to stop the instance once you finish working with it, as it's paid for**
 
 
 
@@ -18,4 +19,7 @@
 1. In the console in the browser, go to Compute Engine -> VM Instances;  
 2. Stop the group27instance
 
+### HELP I'M STUCK
+Q: I cannot connect via ssh, it says "connection time-out"
+A: Most likely you haven't started the instance, see _Starting the instance_
 
