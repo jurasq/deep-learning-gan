@@ -13,3 +13,6 @@
 
 ### Connecting to a VM:
 1. `gcloud compute ssh --zone=europe-west1-b group27instance`
+2. only once: `/home/shared/setup.sh && source ~/.bashrc`
+3. go to shared directory: `cd /home/shared`. run jupyter-notebook: `jupyter-notebook --no-browser --port=7000`
+4. Find the static ip here: https://console.cloud.google.com/compute/instances?project=group-27-203507
