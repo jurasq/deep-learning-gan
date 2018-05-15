@@ -7,3 +7,8 @@
 4. Activate the environment using `pipenv install` and `pipenv shell`
 5. Check that everything is working by doing `python -V` and `gcloud ml-engine models list`
 6. More information: https://cloud.google.com/ml-engine/docs/tensorflow/getting-started-training-prediction
+
+
+
+### Connecting to a VM:
+1. `gcloud compute ssh --zone=europe-west1-b group27instance`
