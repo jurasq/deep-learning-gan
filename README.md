@@ -1,4 +1,15 @@
-### Setting up:
+# Your local computer
+### Setting up
+1. install pipenv https://github.com/pypa/pipenv
+2. go to the cloned repository, run the following:
+    1. pipenv install
+    2. pipenv shell
+    3. jupyter notebook
+3. Open whatever jupyter notebook you want
+
+
+# The cloud
+### Setting up the cloud:
 1. Install Google Cloud SDK from here: https://cloud.google.com/sdk/docs/
 2. Connect to VM (see below) and run `/home/shared/setup.sh && source ~/.bashrc`
 3. Also, run `jupyter notebook password` and set the password to group27password
