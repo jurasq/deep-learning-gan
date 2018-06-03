@@ -1,0 +1,6 @@
+Tensor("Mean:0", shape=(), dtype=float32)
+Discriminator has 18 variables to train.
+Generator has 14 variables to train. 
+Reusing variable scope? False
+Initialized variables.
+Read data.
