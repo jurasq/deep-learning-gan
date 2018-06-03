@@ -1,6 +1,65 @@
+2018-06-03 17:13:08.730264: I tensorflow/core/platform/cpu_feature_guard.cc:140] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+2018-06-03 17:13:08.863386: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:898] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2018-06-03 17:13:08.863738: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1344] Found device 0 with properties: 
+name: Tesla K80 major: 3 minor: 7 memoryClockRate(GHz): 0.8235
+pciBusID: 0000:00:04.0
+totalMemory: 11.17GiB freeMemory: 11.09GiB
+2018-06-03 17:13:08.864363: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1423] Adding visible gpu devices: 0
+2018-06-03 17:13:10.586950: I tensorflow/core/common_runtime/gpu/gpu_device.cc:911] Device interconnect StreamExecutor with strength 1 edge matrix:
+2018-06-03 17:13:10.587001: I tensorflow/core/common_runtime/gpu/gpu_device.cc:917]      0 
+2018-06-03 17:13:10.587011: I tensorflow/core/common_runtime/gpu/gpu_device.cc:930] 0:   N 
+2018-06-03 17:13:10.588406: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1041] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10749 MB memory) -> physical GPU (device: 0, name: Tesla K80, pci bus id: 0000:00:04.0, compute capability: 3.7)
+/home/shared/anaconda3/lib/python3.6/site-packages/h5py/__init__.py:36: FutureWarning: Conversion of the second argument of issubdtype from `float` to `np.floating` is deprecated. In future, it will be treated as `np.float64 == np.dtype(float).type`.
+  from ._conv import register_converters as _register_converters
+WARNING:tensorflow:From /home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/contrib/learn/python/learn/datasets/base.py:198: retry (from tensorflow.contrib.learn.python.learn.datasets.base) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use the retry module or similar alternatives.
+WARNING:tensorflow:From PoC_Clean.py:355: calling reduce_max (from tensorflow.python.ops.math_ops) with keep_dims is deprecated and will be removed in a future version.
+Instructions for updating:
+keep_dims is deprecated, use keepdims instead
+2018-06-03 17:13:16.534231: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1423] Adding visible gpu devices: 0
+2018-06-03 17:13:16.534299: I tensorflow/core/common_runtime/gpu/gpu_device.cc:911] Device interconnect StreamExecutor with strength 1 edge matrix:
+2018-06-03 17:13:16.534311: I tensorflow/core/common_runtime/gpu/gpu_device.cc:917]      0 
+2018-06-03 17:13:16.534319: I tensorflow/core/common_runtime/gpu/gpu_device.cc:930] 0:   N 
+2018-06-03 17:13:16.534498: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1041] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10749 MB memory) -> physical GPU (device: 0, name: Tesla K80, pci bus id: 0000:00:04.0, compute capability: 3.7)
+2018-06-03 17:13:17.213650: W tensorflow/core/framework/op_kernel.cc:1273] OP_REQUIRES failed at matching_files_op.cc:49 : Not found: Data/Human; No such file or directory
+2018-06-03 17:13:17.213723: W tensorflow/core/framework/op_kernel.cc:1273] OP_REQUIRES failed at matching_files_op.cc:49 : Not found: Data/Human; No such file or directory
+2018-06-03 17:13:17.214288: W tensorflow/core/framework/op_kernel.cc:1273] OP_REQUIRES failed at matching_files_op.cc:49 : Not found: Data/Human; No such file or directory
+2018-06-03 17:13:17.217237: W tensorflow/core/framework/op_kernel.cc:1273] OP_REQUIRES failed at matching_files_op.cc:49 : Not found: Data/Human; No such file or directory
+2018-06-03 17:13:17.217381: W tensorflow/core/framework/op_kernel.cc:1273] OP_REQUIRES failed at iterator_ops.cc:831 : Not found: Data/Human; No such file or directory
+	 [[Node: ShuffleDataset/MatchingFiles = MatchingFiles[](ShuffleDataset/MatchingFiles/pattern)]]
 Tensor("Mean:0", shape=(), dtype=float32)
 Discriminator has 18 variables to train.
 Generator has 14 variables to train. 
 Reusing variable scope? False
 Initialized variables.
 Read data.
+Traceback (most recent call last):
+  File "/home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1327, in _do_call
+    return fn(*args)
+  File "/home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1312, in _run_fn
+    options, feed_dict, fetch_list, target_list, run_metadata)
+  File "/home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1420, in _call_tf_sessionrun
+    status, run_metadata)
+  File "/home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/python/framework/errors_impl.py", line 516, in __exit__
+    c_api.TF_GetCode(self.status.status))
+tensorflow.python.framework.errors_impl.NotFoundError: Data/Human; No such file or directory
+	 [[Node: ShuffleDataset/MatchingFiles = MatchingFiles[](ShuffleDataset/MatchingFiles/pattern)]]
+	 [[Node: OneShotIterator = OneShotIterator[container="", dataset_factory=_make_dataset_47af6a4b[], output_shapes=[[?]], output_types=[DT_STRING], shared_name="", _device="/job:localhost/replica:0/task:0/device:CPU:0"]()]]
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "PoC_Clean.py", line 462, in <module>
+    real_seq_batch = sess.run(next_batch)
+  File "/home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 905, in run
+    run_metadata_ptr)
+  File "/home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1140, in _run
+    feed_dict_tensor, options, run_metadata)
+  File "/home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1321, in _do_run
+    run_metadata)
+  File "/home/shared/anaconda3/lib/python3.6/site-packages/tensorflow/python/client/session.py", line 1340, in _do_call
+    raise type(e)(node_def, op, message)
+tensorflow.python.framework.errors_impl.NotFoundError: Data/Human; No such file or directory
+	 [[Node: ShuffleDataset/MatchingFiles = MatchingFiles[](ShuffleDataset/MatchingFiles/pattern)]]
+	 [[Node: OneShotIterator = OneShotIterator[container="", dataset_factory=_make_dataset_47af6a4b[], output_shapes=[[?]], output_types=[DT_STRING], shared_name="", _device="/job:localhost/replica:0/task:0/device:CPU:0"]()]]
