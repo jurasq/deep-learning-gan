@@ -13,6 +13,7 @@ from tensorflow.python.client import timeline
 from six.moves import cPickle as pickle
 from six.moves import range
 import random
+import time
 #import matplotlib.pyplot as plt
 import math
 #%matplotlib inline
@@ -430,7 +431,8 @@ trainerG = adamG.minimize(g_loss, var_list=g_vars)
 # In[ ]:
 
 
-iterations = 15
+
+iterations = 1
 sess = tf.Session()
 
 summary_op = tf.summary.merge_all()
@@ -457,6 +459,9 @@ with sess.as_default():
     options2 = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
     run_metadata2 = tf.RunMetadata()
     #iterations=3000
+
+    start_all = time.time()
+
     for i in range(iterations):
         z_batch = np.random.normal(-1, 1, size=[batch_size, z_dimensions])
         real_seq_batch = sess.run(next_batch)
@@ -476,7 +481,13 @@ with sess.as_default():
         with open('Profiler_gen_%d.json' % i, 'w') as f:
             f.write(chrome_trace)
 
+        part_all = time.time()
+        print("Time spent on this iteration: %.3f seconds" % (part_all-start_all))
+
         if i % 1 == 0:
             train_writer.add_summary(summary1, i)
             train_writer.add_summary(summary2, i)
         print("Iteration %d/%d done." %(i+1, iterations))
+
+    end_all = time.time()
+    print("Total time spent: %.3f seconds" % (end_all-start_all))
