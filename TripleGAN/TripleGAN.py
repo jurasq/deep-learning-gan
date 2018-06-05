@@ -74,7 +74,7 @@ class TripleGAN(object) :
 
             self.sample_num = 64 # ? Unused for now
             self.visual_num = 100 #Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
-            self.len_discrete_code = 4 #Thinkg this is one-hot encoding for visualization ?
+            self.len_discrete_code = 4 #Think this is one-hot encoding for visualization ?
 
             self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(n,self.test_batch_size) # trainX, trainY, testX, testY
 
@@ -85,29 +85,29 @@ class TripleGAN(object) :
 
     def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse) :
-            x = dropout(x, rate=0.2, is_training=is_training)
+            x = dropout_original(x, rate=0.2, is_training=is_training)
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
             x = conv_concat(x,y)
 
-            x = lrelu(conv_layer(x, filter_size=32, kernel=[3,3], layer_name=scope+'_conv1'))
+            x = lrelu(conv_layer_original(x, filter_size=32, kernel=[3,3], layer_name=scope+'_conv1'))
             x = conv_concat(x,y)
-            x = lrelu(conv_layer(x, filter_size=32, kernel=[3,3], stride=2, layer_name=scope+'_conv2'))
-            x = dropout(x, rate=0.2, is_training=is_training)
-            x = conv_concat(x,y)
-
-            x = lrelu(conv_layer(x, filter_size=64, kernel=[3,3], layer_name=scope+'_conv3'))
-            x = conv_concat(x,y)
-            x = lrelu(conv_layer(x, filter_size=64, kernel=[3,3], stride=2, layer_name=scope+'_conv4'))
-            x = dropout(x, rate=0.2, is_training=is_training)
+            x = lrelu(conv_layer_original(x, filter_size=32, kernel=[3,3], stride=2, layer_name=scope+'_conv2'))
+            x = dropoutconv_layer_original(x, rate=0.2, is_training=is_training)
             x = conv_concat(x,y)
 
-            x = lrelu(conv_layer(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv5'))
+            x = lrelu(conv_layer_original(x, filter_size=64, kernel=[3,3], layer_name=scope+'_conv3'))
             x = conv_concat(x,y)
-            x = lrelu(conv_layer(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv6'))
+            x = lrelu(conv_layer_original(x, filter_size=64, kernel=[3,3], stride=2, layer_name=scope+'_conv4'))
+            x = dropout_original(x, rate=0.2, is_training=is_training)
             x = conv_concat(x,y)
+
+            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv5'))
+            x = conv_concat(x,y)
+            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv6'))
+            x = conv_concat_original(x,y)
 
             x = Global_Average_Pooling(x)
-            x = flatten(x)
+            x = flatten_original(x)
             x = concat([x,y_]) # mlp_concat
 
             x_logit = linear(x, unit=1, layer_name=scope+'_linear1')
@@ -143,26 +143,26 @@ class TripleGAN(object) :
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse) :
             x = gaussian_noise_layer(x) # default = 0.15
-            x = lrelu(conv_layer(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv1'))
-            x = lrelu(conv_layer(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv2'))
-            x = lrelu(conv_layer(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv3'))
+            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv1'))
+            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv2'))
+            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv3'))
 
-            x = max_pooling(x, kernel=[2,2], stride=2)
-            x = dropout(x, rate=0.5, is_training=is_training)
+            x = max_pooling_original(x, kernel=[2,2], stride=2)
+            x = dropout_original(x, rate=0.5, is_training=is_training)
 
-            x = lrelu(conv_layer(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv4'))
-            x = lrelu(conv_layer(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv5'))
-            x = lrelu(conv_layer(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv6'))
+            x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv4'))
+            x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv5'))
+            x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv6'))
 
-            x = max_pooling(x, kernel=[2,2], stride=2)
-            x = dropout(x, rate=0.5, is_training=is_training)
+            x = max_pooling_original(x, kernel=[2,2], stride=2)
+            x = dropout_original(x, rate=0.5, is_training=is_training)
 
-            x = lrelu(conv_layer(x, filter_size=512, kernel=[3,3], layer_name=scope+'_conv7'))
+            x = lrelu(conv_layer_original(x, filter_size=512, kernel=[3,3], layer_name=scope+'_conv7'))
             x = nin(x, unit=256, layer_name=scope+'_nin1')
             x = nin(x, unit=128, layer_name=scope+'_nin2')
 
             x = Global_Average_Pooling(x)
-            x = flatten(x)
+            x = flatten_original(x)
             x = linear(x, unit=10, layer_name=scope+'_linear1')
             return x
 
