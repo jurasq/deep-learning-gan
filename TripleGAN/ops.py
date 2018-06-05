@@ -18,7 +18,53 @@ def weight_norm(x, output_dim) :
 
     return tf.variables_initializer(w_init)
 
-def conv_layer(x, filter_size, kernel, stride=1, padding='SAME', wn=False, layer_name="conv"):
+
+def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
+               stride=1, padding="VALID", relu=True, lrelu=False,
+               batch_normalize=False, batch_normalize_training=True,
+               name_suffix=None, batch_norm=False):
+    """
+    Return a convolution layer, possibly with a ReLU at the end.
+    :param name_scope:   where the variables live
+    :param input_tensor: of shape [batch, in_height, in_width, in_channels], e.g. [15 500 4 1]
+    :param num_kernels:  number of kernels to use for this conv. layer
+    :param kernel_shape: the shape of the kernel to use, [height, width]
+    """
+    name_suffix = name_suffix if name_suffix else ""
+
+    #E.g. batch_size x 500x4x1 for the first input
+    input_shape = input_tensor.get_shape().as_list()
+    input_channels = input_shape[-1]
+
+    #not really sure why I'm using the name_scope, I think it's mostly for presentation purposes
+    with tf.name_scope(name_scope):
+
+        weights_shape = kernel_shape + [input_channels, num_kernels]
+        init_vals_weights = tf.truncated_normal(weights_shape, stddev=math.sqrt(2 / float(input_channels)))
+        filter_weights = tf.Variable(init_vals_weights, name='weights'+name_suffix)
+        variable_summaries(filter_weights)
+
+        biases = tf.Variable(tf.zeros([num_kernels]), name='biases'+name_suffix)
+        variable_summaries(biases)
+
+        #Define a convolutional layer
+        layer = tf.nn.conv2d(input_tensor, filter_weights, strides=[1, stride, stride, 1], padding=padding) + biases
+
+        #Add batch normalisation if specified
+        #TODO: is_training always True?
+        if batch_norm:
+            layer = tf.contrib.layers.batch_norm(inputs = layer, center=True, scale=True, is_training=True)
+
+        #Add (leaky) ReLU if specified
+        if relu and lrelu:
+            layer = tf.nn.leaky_relu(layer, name="lrelu_"+name_suffix)
+        elif relu:
+            layer = tf.nn.relu(layer, name="relu_"+name_suffix)
+
+        return layer
+
+
+def conv_layer_original(x, filter_size, kernel, stride=1, padding='SAME', wn=False, layer_name="conv"):
     with tf.name_scope(layer_name):
         if wn:
             w_init = weight_norm(x, filter_size)
@@ -27,6 +73,45 @@ def conv_layer(x, filter_size, kernel, stride=1, padding='SAME', wn=False, layer
         else :
             x = tf.layers.conv2d(inputs=x, filters=filter_size, kernel_size=kernel, kernel_initializer=he_init, strides=stride, padding=padding)
         return x
+
+
+def conv_max_forward_reverse(name_scope, input_tensor, num_kernels, kernel_shape,
+                             stride=1, padding='VALID', relu=True, lrelu=False, name_suffix = None):
+    """
+    Returns a convolution layer
+    """
+    name_suffix = name_suffix if name_suffix else ""
+    input_shape = input_tensor.get_shape().as_list()
+    input_channels = input_shape[-1] # number of input channels
+
+    with tf.name_scope(name_scope):
+        shape = kernel_shape + [input_channels, num_kernels]
+        initer = tf.truncated_normal(shape, stddev=math.sqrt(2 / float(input_channels)))
+        weights = tf.Variable(initer, name='weights')
+        num_kernels = weights.get_shape()[3]
+        biases = tf.Variable(tf.zeros([num_kernels]), name='biases')
+
+        # If one component of shape is the special value -1, the size of that dimension is computed
+        #  so that the total size remains constant.
+        # In our case: -1 is inferred to be input_channels * out_channels:
+        new_weights_shape = [-1] + kernel_shape + [1]
+        w_image = tf.reshape(weights, new_weights_shape)
+        tf.summary.image(name_scope + "_weights_im", w_image, weights.get_shape()[3])
+        forward_conv = tf.nn.conv2d(input_tensor, weights, strides=[1, stride, stride, 1], padding=padding,
+                               name="forward_conv") + biases
+        # for reverse complement: reverse in dimension 0 and 1:
+        rev_comp_weights = tf.reverse(weights, [0, 1], name="reverse_weights")
+        reverse_conv = tf.nn.conv2d(input_tensor, rev_comp_weights,
+                                    strides=[1, stride, stride, 1], padding=padding,
+                                    name="reverse_conv") + biases
+        # takes the maximum between the forward weights and the rev.-comp.-weights:
+        max_conv = tf.maximum(forward_conv, reverse_conv, name="conv1")
+        if relu and lrelu:
+            return tf.nn.leaky_relu(max_conv, name="lrelu_"+name_suffix)
+        elif relu:
+            return tf.nn.relu(max_conv, name="relu_"+name_suffix)
+        else:
+            return max_conv
 
 
 def deconv_layer(x, filter_size, kernel, stride=1, padding='SAME', wn=False, layer_name='deconv'):
@@ -69,11 +154,32 @@ def Global_Average_Pooling(x):
     return global_avg_pool(x, name='Global_avg_pooling')
 
 
-def max_pooling(x, kernel, stride):
+def max_pool_layer(name_scope, input_tensor, pool_size, strides = None, padding="SAME"):
+    """
+    Return a max pool layer.
+    """
+    if not strides:
+        strides = [1] + pool_size + [1]
+
+    #TODO: is name_scope really needed?
+    with tf.name_scope(name_scope):
+        layer = tf.nn.max_pool(input_tensor, [1] + pool_size + [1], strides=strides, padding=padding)
+        return layer
+
+
+def max_pooling_original(x, kernel, stride):
     return tf.layers.max_pooling2d(x, pool_size=kernel, strides=stride, padding='VALID')
 
 
 def flatten(x):
+    """
+    Returns a flat (one-dimensional) version of the input
+    """
+    x_shape = x.get_shape().as_list()
+    return tf.reshape(x, [-1, np.product(x_shape[1:])])
+
+
+def flatten_original(x):
     return tf.contrib.layers.flatten(x)
 
 
@@ -127,7 +233,17 @@ def instance_norm(x, is_training, scope):
 
         return out
 
-def dropout(x, rate, is_training):
+
+def dropout_layer(name_scope, input_tensor, keep_prob=0.5):
+    """
+    Return a dropout layer.
+    """
+    #TODO: is name_scope really needed?
+    with tf.name_scope(name_scope):
+        return tf.nn.droupout(input_tensor, keep_prob)
+
+
+def dropout_original(x, rate, is_training):
     return tf.layers.dropout(inputs=x, rate=rate, training=is_training)
 
 def rampup(epoch):
