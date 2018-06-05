@@ -76,7 +76,7 @@ class TripleGAN(object) :
             self.visual_num = 100 #Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
             self.len_discrete_code = 4 #Think this is one-hot encoding for visualization ?
 
-            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(n,self.test_batch_size) # trainX, trainY, testX, testY
+            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(n, self.test_batch_size) # trainX, trainY, testX, testY
 
             self.num_batches = len(self.data_X) // self.batch_size
 
