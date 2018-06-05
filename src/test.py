@@ -1,6 +1,3 @@
-import random
-import numpy as np
-from collections import defaultdict
 import dna
 
 if __name__ == '__main__':
