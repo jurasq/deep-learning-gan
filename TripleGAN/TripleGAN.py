@@ -60,23 +60,23 @@ class TripleGAN(object) :
             #These values are left as is for now (3/6/2018)
             self.learning_rate = gan_lr # 3e-4, 1e-3
             self.cla_learning_rate = cla_lr # 3e-3, 1e-2 ?
-            self.GAN_beta1 = 0.5
-            self.beta1 = 0.9
-            self.beta2 = 0.999
-            self.epsilon = 1e-8
+            self.GAN_beta1 = 0.5 #D and G, exponential decay rate for the 1st moment estimates
+            self.beta1 = 0.9 #C, exponential decay rate for the 1st moment estimates
+            self.beta2 = 0.999 #C, exponential decay rate for the 2nd moment estimates
+            self.epsilon = 1e-8 #C, A small constant for numerical stability. This epsilon is "epsilon hat" in the Kingma and Ba paper (in the formula just before Section 2.1), not the epsilon in Algorithm 1 of the paper.
             self.alpha = 0.5
             self.alpha_cla_adv = 0.01
             self.init_alpha_p = 0.0 # 0.1, 0.03
             self.apply_alpha_p = 0.1
-            self.apply_epoch = 200 # 200, 300
-            self.decay_epoch = 50
+            self.apply_epoch = 200 # 200, 300 Point in epoch we change alpha_p from init to apply, if epoch >= self.apply_epoch: alpha_p = self.apply_alpha_p else: alpha_p = self.init_alpha_p
+            self.decay_epoch = 50 #Point in epoch we start adding decay. if epoch >= decay_epoch, add decay. Note decay is hard coded.
 
 
             self.sample_num = 64 # ? Unused for now
             self.visual_num = 100 #Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
             self.len_discrete_code = 4 #Thinkg this is one-hot encoding for visualization ?
 
-            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(n) # trainX, trainY, testX, testY
+            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(n,self.test_batch_size) # trainX, trainY, testX, testY
 
             self.num_batches = len(self.data_X) // self.batch_size
 

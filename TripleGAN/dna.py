@@ -8,10 +8,10 @@ class_num = 10
 image_size = 32
 img_channels = 3
 
-def prepare_data(n):
+def prepare_data(n,m):
     num_classes = 2 #Number of classes
 
-    (train_data, train_labels), (test_data, test_labels) = load_dna_data(100, 50, "../Data", ["Human"], 1)
+    (train_data, train_labels), (test_data, test_labels) = load_dna_data(n, m, "../Data", ["Human"], 1)
 
     #Pre-processing should happen here if wanted if wanted. We have processed data.
 
@@ -83,24 +83,25 @@ def load_dna_data(num_train, num_test, base_folder, species, samples):
         raise ValueError("We only have 14000 samples per species, so the sum of training and test samples cannot exceed 14000. \n")
 
     print("======Loading data======")
-    raw_train_data = raw_test_data = np.empty((0, 1),dtype=str)
-    labels_train = labels_test = np.empty((0, 1),dtype=int)
+    raw_train_data = raw_test_data = x_train = x_test = np.empty((0, 1),dtype=str)
+    labels_train = labels_test = y_train = y_test = np.empty((0, 1),dtype=int)
 
     for spec in species:
-        neg_file = base_folder + '/' + spec + '/' + "negative_samples"
-        pos_file = base_folder + '/' + spec + '/' + "positive_samples"
+        neg_file = base_folder + '/' + spec + '/' + "negative_samples_encoded.npy"
+        pos_file = base_folder + '/' + spec + '/' + "positive_samples_encoded.npy"
+
         if samples == -1:
-            with open(neg_file) as f:
-                raw_spec_data = np.loadtxt(f,dtype=str)
+            with open(neg_file, 'rb') as f:
+                raw_spec_data = np.load(f)
                 spec_labels = np.zeros((raw_spec_data.shape[0], 1),dtype=int)
         elif samples == 1:
-            with open(pos_file) as f:
-                raw_spec_data = np.loadtxt(f,dtype=str)
+            with open(pos_file, 'rb') as f:
+                raw_spec_data = np.load(f)
                 spec_labels = np.ones((raw_spec_data.shape[0], 1),dtype=int)
         else:
-            with open(pos_file) as f_pos, open(neg_file) as f_neg:
-                raw_pos_data = np.loadtxt(f_pos,dtype=str)
-                raw_neg_data = np.loadtxt(f_neg,dtype=str)
+            with open(pos_file, 'rb') as f_pos, open(neg_file, 'rb') as f_neg:
+                raw_pos_data = np.load(f_pos)
+                raw_neg_data = np.load(f_neg)
 
                 pos_labels = np.one((raw_pos_data.shape[0], 1),dtype=int)
                 neg_labels = np.zeros((raw_neg_data.shape[0], 1),dtype=int)
@@ -110,24 +111,18 @@ def load_dna_data(num_train, num_test, base_folder, species, samples):
         train_idx = np.random.choice(num_train+num_test, num_train, replace=False)
         test_idx = np.setxor1d(np.arange(num_train+num_test), train_idx)
 
-        raw_train_data = np.append(raw_train_data, raw_spec_data[train_idx])
-        labels_train = np.append(labels_train, spec_labels[train_idx])
+        x_train = np.append(x_train, raw_spec_data[train_idx])
+        y_train = np.append(y_train, spec_labels[train_idx])
 
-        raw_test_data = np.append(raw_test_data, raw_spec_data[test_idx])
-        labels_test = np.append(labels_test, spec_labels[test_idx])
-
-    print("======Encoding data======")
-    x_train = one_hot_encode(raw_train_data)
-    y_train = labels_train[:, np.newaxis]
-
-    x_test = one_hot_encode(raw_test_data)
-    y_test = labels_test[:, np.newaxis]
-    print("======Encoding finished======")
+        x_test = np.append(x_test, raw_spec_data[test_idx])
+        y_test = np.append(y_test, spec_labels[test_idx])
 
     return (x_train, y_train), (x_test, y_test)
 
 def one_hot_encode_string(string):
-    return pd.Series(list(string)).str.get_dummies().reset_index().values[:,1:]
+    cats = ['A', 'C', 'T', 'G']
+    dummies = pd.Series(list(string)).str.get_dummies()
+    return dummies.T.reindex(cats).T.fillna(0).reset_index().values[:,1:]
 
 def one_hot_encode(data, seq_length=500):
     one_hot_arr = np.empty((data.shape[0], seq_length, 4))
