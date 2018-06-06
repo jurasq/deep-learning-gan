@@ -21,7 +21,6 @@ def weight_norm(x, output_dim) :
 
 def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
                stride=1, padding="VALID", relu=True, lrelu=False,
-               batch_normalize=False, batch_normalize_training=True,
                name_suffix=None, batch_norm=False):
     """
     Return a convolution layer, possibly with a ReLU at the end.
@@ -42,10 +41,9 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
         weights_shape = kernel_shape + [input_channels, num_kernels]
         init_vals_weights = tf.truncated_normal(weights_shape, stddev=math.sqrt(2 / float(input_channels)))
         filter_weights = tf.Variable(init_vals_weights, name='weights'+name_suffix)
-        variable_summaries(filter_weights)
+
 
         biases = tf.Variable(tf.zeros([num_kernels]), name='biases'+name_suffix)
-        variable_summaries(biases)
 
         #Define a convolutional layer
         layer = tf.nn.conv2d(input_tensor, filter_weights, strides=[1, stride, stride, 1], padding=padding) + biases
@@ -142,13 +140,13 @@ def nin(x, unit, wn=False, layer_name='nin'):
         x = linear(x, unit, wn, layer_name)
         x = tf.reshape(x, s[:-1] + [unit])
 
-
         return x
 
 
 def gaussian_noise_layer(x, std=0.15):
     noise = tf.random_normal(shape=tf.shape(x), mean=0.0, stddev=std, dtype=tf.float32)
     return x + noise
+
 
 def Global_Average_Pooling(x):
     return global_avg_pool(x, name='Global_avg_pooling')
@@ -161,7 +159,6 @@ def max_pool_layer(name_scope, input_tensor, pool_size, strides = None, padding=
     if not strides:
         strides = [1] + pool_size + [1]
 
-    #TODO: is name_scope really needed?
     with tf.name_scope(name_scope):
         layer = tf.nn.max_pool(input_tensor, [1] + pool_size + [1], strides=strides, padding=padding)
         return layer
@@ -173,13 +170,8 @@ def max_pooling_original(x, kernel, stride):
 
 def flatten(x):
     """
-    Returns a flat (one-dimensional) version of the input
+        Returns a flat (one-dimensional) version of the input
     """
-    x_shape = x.get_shape().as_list()
-    return tf.reshape(x, [-1, np.product(x_shape[1:])])
-
-
-def flatten_original(x):
     return tf.contrib.layers.flatten(x)
 
 

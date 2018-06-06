@@ -47,6 +47,7 @@ ipython_genutils = "*"
 jupyter_client = "*"
 jupyter_core = "*"
 tensorflow = "*"
+tflearn = "*"
 
 [dev-packages]
 
