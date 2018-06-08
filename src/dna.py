@@ -83,7 +83,7 @@ def load_dna_data(num_train, num_test, base_folder, species, samples):
         raise ValueError("We only have 14000 samples per species, so the sum of training and test samples cannot exceed 14000. \n")
 
     print("======Loading data======")
-    raw_train_data = raw_test_data = x_train = x_test = np.empty((0, 1),dtype=str)
+    raw_train_data = raw_test_data = x_train = x_test = np.empty((0, 1),dtype=int)
     labels_train = labels_test = y_train = y_test = np.empty((0, 1),dtype=int)
 
     for spec in species:
@@ -117,8 +117,13 @@ def load_dna_data(num_train, num_test, base_folder, species, samples):
         x_test = np.append(x_test, raw_spec_data[test_idx])
         y_test = np.append(y_test, spec_labels[test_idx])
 
-    #FIXME: is this really what we want (height 4, width 500?)
-    return (x_train.T, y_train.T), (x_test.T, y_test.T)
+    #FIXME: this has hardcoded length, maybe use the ones from intialization
+    x_train = x_train.reshape((-1, 4, 500, 1))
+    x_test = x_test.reshape((-1, 4, 500, 1))
+
+    print("Sample training example:")
+    print(x_train[0, :, :, 0])
+    return (x_train, y_train), (x_test, y_test)
 
 def one_hot_encode_string(string):
     cats = ['A', 'C', 'T', 'G']
