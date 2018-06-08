@@ -21,7 +21,7 @@ def weight_norm(x, output_dim) :
 
 def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
                stride=1, padding="VALID", relu=True, lrelu=False,
-               name_suffix=None, batch_norm=False):
+               name_suffix=None, batch_norm=False, is_training=True):
     """
     Return a convolution layer, possibly with a ReLU at the end.
     :param name_scope:   where the variables live
@@ -35,7 +35,6 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
     input_shape = input_tensor.get_shape().as_list()
     input_channels = input_shape[-1]
 
-    #not really sure why I'm using the name_scope, I think it's mostly for presentation purposes
     with tf.name_scope(name_scope):
 
         weights_shape = kernel_shape + [input_channels, num_kernels]
@@ -49,9 +48,8 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
         layer = tf.nn.conv2d(input_tensor, filter_weights, strides=[1, stride, stride, 1], padding=padding) + biases
 
         #Add batch normalisation if specified
-        #TODO: is_training always True?
         if batch_norm:
-            layer = tf.contrib.layers.batch_norm(inputs = layer, center=True, scale=True, is_training=True)
+            layer = tf.contrib.layers.batch_norm(inputs = layer, center=True, scale=True, is_training=is_training)
 
         #Add (leaky) ReLU if specified
         if relu and lrelu:

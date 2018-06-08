@@ -48,6 +48,7 @@ jupyter_client = "*"
 jupyter_core = "*"
 tensorflow = "*"
 tflearn = "*"
+pandas = "*"
 
 [dev-packages]
 

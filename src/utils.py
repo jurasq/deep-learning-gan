@@ -1,4 +1,5 @@
-import scipy.misc, os
+# import scipy.misc
+import os
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
@@ -16,8 +17,9 @@ def save_images(images, size, image_path):
     return imsave(inverse_transform(images), size, image_path)
 
 def imsave(images, size, path):
-    image = np.squeeze(merge(images, size))
-    return scipy.misc.imsave(path, image)
+    pass
+    # image = np.squeeze(merge(images, size))
+    # return scipy.misc.imsave(path, image)
 
 def inverse_transform(images):
     return (images+1.)/2.
