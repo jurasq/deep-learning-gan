@@ -13,6 +13,10 @@ class GAN(TripleGAN):
                            n, gan_lr, cla_lr, checkpoint_dir, result_dir, log_dir)
         self.model_name = "(Standard) GAN"  # for checkpoint
         self.alpha = 0  # #so that discriminator loss = D_loss_real + D_loss_fake
+        self.gan_lr_d = gan_lr / 10000
+        self.gan_lr_g = cla_lr
+
+        print("Initializing GAN with d_lr=%f, g_lr=%f" %(self.gan_lr_d, self.gan_lr_g))
 
     def discriminator(self, dna_sequence, y_=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
@@ -186,9 +190,9 @@ class GAN(TripleGAN):
         # for var in t_vars: print(var.name)
         # optimizers
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            self.d_optim = tf.train.AdamOptimizer(self.gan_lr, beta1=self.GAN_beta1).minimize(self.d_loss,
+            self.d_optim = tf.train.AdamOptimizer(self.gan_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
                                                                                               var_list=d_vars)
-            self.g_optim = tf.train.AdamOptimizer(self.gan_lr, beta1=self.GAN_beta1).minimize(self.g_loss,
+            self.g_optim = tf.train.AdamOptimizer(self.gan_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
                                                                                               var_list=g_vars)
 
         """" Testing """
@@ -265,8 +269,6 @@ class GAN(TripleGAN):
             for idx in range(start_batch_id, self.num_batches):
                 batch_images = self.data_X[idx * self.batch_size: (idx + 1) * self.batch_size]
                 batch_codes = self.data_y[idx * self.batch_size: (idx + 1) * self.batch_size]
-                print(self.data_X.shape)
-                print("Shape of batch images" + str(batch_images.shape))
                 batch_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
 
                 feed_dict = {
@@ -333,27 +335,34 @@ class GAN(TripleGAN):
             self.save(self.checkpoint_dir, counter)
 
             # show temporal results
-            # self.visualize_results(epoch)
+            self.visualize_results(epoch)
 
             # save model for final step
         self.save(self.checkpoint_dir, counter)
 
     def visualize_results(self, epoch):
+        #TODO: this works, but doesn't save the generated samples
+        #TODO: this is very hacky (especially the visual_y etc - they are not used, but need to be provided)
+        #TODO: need to adapt this, including changing the variable names and variables so that it's not about images anymore
+        #TODO: and is more robust (e.g. providing None as the y should work).
+        #TODO: otherwise this will be very confusing
         # tot_num_samples = min(self.sample_num, self.batch_size)
         image_frame_dim = int(np.floor(np.sqrt(self.visual_num)))
         z_sample = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
 
         """ random noise, random discrete code, fixed continuous code """
-        y = np.random.choice(self.len_discrete_code, self.visual_num)
+        # y = np.random.choice(self.len_discrete_code, self.visual_num)
         # Generated 10 labels with batch_size
         y_one_hot = np.zeros((self.visual_num, self.y_dim))
-        y_one_hot[np.arange(self.visual_num), y] = 1
+        # y_one_hot[np.arange(self.visual_num), y] = 1
 
-        samples = self.sess.run(self.fake_images, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
-
-        save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
-                    check_folder(
-                        self.result_dir + '/' + self.model_dir + '/all_classes') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes.png')
+        samples = self.sess.run(self.fake_sequences, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
+        print("Generated samples:")
+        print(samples)
+        return
+        # save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
+        #             check_folder(
+        #                 self.result_dir + '/' + self.model_dir + '/all_classes') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes.png')
 
         """ specified condition, random noise """
         n_styles = 10  # must be less than or equal to self.batch_size
