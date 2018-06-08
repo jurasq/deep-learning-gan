@@ -18,10 +18,10 @@ class TripleGAN(object):
         self.model_name = "TripleGAN"  # name for checkpoint
 
         if self.dataset_name == 'dna':
-            self.input_height = 4  # Input sequence length
-            self.input_width = 500  # One-hot encoding
-            self.output_height = 4 # Output sequence length
-            self.output_width = 500
+            self.input_height = 4  # One-hot encoding
+            self.input_width = 500  # Input sequence length
+            self.output_height = 4  # One-hot encoding
+            self.output_width = 500  # Output sequence length
 
             self.z_dim = z_dim  # Random noise dimension
             self.y_dim = 2  # Number of labels
