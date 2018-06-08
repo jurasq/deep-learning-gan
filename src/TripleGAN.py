@@ -1,11 +1,11 @@
-import cifar10
 import dna
 from ops import *
 from utils import *
 import time
 
-class TripleGAN(object) :
-    def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name, n, gan_lr, cla_lr, checkpoint_dir, result_dir, log_dir):
+class TripleGAN(object):
+    def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
+                 n, gan_lr, cla_lr, checkpoint_dir, result_dir, log_dir):
         self.sess = sess
         self.dataset_name = dataset_name
         self.checkpoint_dir = checkpoint_dir
@@ -15,72 +15,45 @@ class TripleGAN(object) :
         self.batch_size = batch_size
         self.unlabelled_batch_size = unlabel_batch_size
         self.test_batch_size = 1000
-        self.model_name = "TripleGAN"     # name for checkpoint
-        if self.dataset_name == 'cifar10' :
-            self.input_height = 32
-            self.input_width = 32
-            self.output_height = 32
-            self.output_width = 32
+        self.model_name = "TripleGAN"  # name for checkpoint
 
-            self.z_dim = z_dim
-            self.y_dim = 10
-            self.c_dim = 3
+        if self.dataset_name == 'dna':
+            self.input_height = 4  # Input sequence length
+            self.input_width = 500  # One-hot encoding
+            self.output_height = 4 # Output sequence length
+            self.output_width = 500
 
-            self.learning_rate = gan_lr # 3e-4, 1e-3
-            self.cla_learning_rate = cla_lr # 3e-3, 1e-2 ?
-            self.GAN_beta1 = 0.5
-            self.beta1 = 0.9
-            self.beta2 = 0.999
+            self.z_dim = z_dim  # Random noise dimension
+            self.y_dim = 2  # Number of labels
+            self.c_dim = 1  # "Colour" dimension
+
+            # These values are left as is for now (3/6/2018)
+            self.learning_rate = gan_lr  # 3e-4, 1e-3
+            self.cla_learning_rate = cla_lr  # 3e-3, 1e-2 ?
+            self.GAN_beta1 = 0.5  # D and G, exponential decay rate for the 1st moment estimates
+            self.beta1 = 0.9  # C, exponential decay rate for the 1st moment estimates
+            self.beta2 = 0.999  # C, exponential decay rate for the 2nd moment estimates
+            # C, A small constant for numerical stability. This epsilon is "epsilon hat"
+            # in the Kingma and Ba paper (in the formula just before Section 2.1),
+            # not the epsilon in Algorithm 1 of the paper.
             self.epsilon = 1e-8
-            self.alpha = 0.5
+            self.alpha = 0.5 # discriminator loss: (1-alpha) * D_loss_fake + alpha * D_loss_classifier + D_loss_real
             self.alpha_cla_adv = 0.01
-            self.init_alpha_p = 0.0 # 0.1, 0.03
+            self.init_alpha_p = 0.0  # 0.1, 0.03
             self.apply_alpha_p = 0.1
-            self.apply_epoch = 200 # 200, 300
-            self.decay_epoch = 50
+            self.apply_epoch = 200  # 200, 300 Point in epoch we change alpha_p from init to apply, if epoch >= self.apply_epoch: alpha_p = self.apply_alpha_p else: alpha_p = self.init_alpha_p
+            self.decay_epoch = 50  # Point in epoch we start adding decay. if epoch >= decay_epoch, add decay. Note decay is hard coded.
 
-            self.sample_num = 64
-            self.visual_num = 100
-            self.len_discrete_code = 10
+            self.sample_num = 64  # ? Unused for now
+            self.visual_num = 15  # Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
+            self.len_discrete_code = 4  # Think this is one-hot encoding for visualization ?
 
-            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = cifar10.prepare_data(n) # trainX, trainY, testX, testY
+            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(
+                n, self.test_batch_size)  # trainX, trainY, testX, testY
 
             self.num_batches = len(self.data_X) // self.batch_size
 
-        elif self.dataset_name == 'dna' :
-            self.input_height = 500 #Input sequence length
-            self.input_width = 4 #One-hot encoding
-            self.output_height = 500 #Output sequence length
-            self.output_width = 4
-
-            self.z_dim = z_dim #Random noise dimension
-            self.y_dim = 2 #Number of labels
-            self.c_dim = 1 #"Colour" dimension
-
-            #These values are left as is for now (3/6/2018)
-            self.learning_rate = gan_lr # 3e-4, 1e-3
-            self.cla_learning_rate = cla_lr # 3e-3, 1e-2 ?
-            self.GAN_beta1 = 0.5 #D and G, exponential decay rate for the 1st moment estimates
-            self.beta1 = 0.9 #C, exponential decay rate for the 1st moment estimates
-            self.beta2 = 0.999 #C, exponential decay rate for the 2nd moment estimates
-            self.epsilon = 1e-8 #C, A small constant for numerical stability. This epsilon is "epsilon hat" in the Kingma and Ba paper (in the formula just before Section 2.1), not the epsilon in Algorithm 1 of the paper.
-            self.alpha = 0.5
-            self.alpha_cla_adv = 0.01
-            self.init_alpha_p = 0.0 # 0.1, 0.03
-            self.apply_alpha_p = 0.1
-            self.apply_epoch = 200 # 200, 300 Point in epoch we change alpha_p from init to apply, if epoch >= self.apply_epoch: alpha_p = self.apply_alpha_p else: alpha_p = self.init_alpha_p
-            self.decay_epoch = 50 #Point in epoch we start adding decay. if epoch >= decay_epoch, add decay. Note decay is hard coded.
-
-
-            self.sample_num = 64 # ? Unused for now
-            self.visual_num = 100 #Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
-            self.len_discrete_code = 4 #Think this is one-hot encoding for visualization ?
-
-            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(n, self.test_batch_size) # trainX, trainY, testX, testY
-
-            self.num_batches = len(self.data_X) // self.batch_size
-
-        else :
+        else:
             raise NotImplementedError
 
     def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
@@ -107,7 +80,7 @@ class TripleGAN(object) :
             x = conv_concat_original(x,y)
 
             x = Global_Average_Pooling(x)
-            x = flatten_original(x)
+            x = flatten(x)
             x = concat([x,y_]) # mlp_concat
 
             x_logit = linear(x, unit=1, layer_name=scope+'_linear1')
@@ -162,7 +135,7 @@ class TripleGAN(object) :
             x = nin(x, unit=128, layer_name=scope+'_nin2')
 
             x = Global_Average_Pooling(x)
-            x = flatten_original(x)
+            x = flatten(x)
             x = linear(x, unit=10, layer_name=scope+'_linear1')
             return x
 

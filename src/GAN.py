@@ -1,6 +1,7 @@
+from __future__ import print_function
 import dna
 from ops import *
-from src.TripleGAN import TripleGAN
+from TripleGAN import TripleGAN
 from utils import *
 import time
 
@@ -11,23 +12,25 @@ class GAN(TripleGAN):
         TripleGAN.__init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
                            n, gan_lr, cla_lr, checkpoint_dir, result_dir, log_dir)
         self.model_name = "(Standard) GAN"  # for checkpoint
+        self.alpha = 0  # #so that discriminator loss = D_loss_real + D_loss_fake
 
     def discriminator(self, dna_sequence, y_=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
-
             # TODO: make a reverse filter conv layer like in the Enhancer paper
 
             # convolutional + pooling #1
             l1 = conv_layer(name_scope="conv1", input_tensor=dna_sequence, num_kernels=20,
-                            kernel_shape=[4, 9], relu=True)
+                            kernel_shape=[4, 9], relu=True, is_training=is_training)
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3])
 
             # convolutional + pooling #2
-            l3 = conv_layer(name_scope="conv2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5])
+            l3 = conv_layer(name_scope="conv2", input_tensor=l2, num_kernels=30,
+                            kernel_shape=[1, 5], relu=True, is_training=is_training)
             l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[1, 4])
 
             # convolutional + pooling #3
-            l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 3])
+            l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40,
+                            kernel_shape=[1, 3], relu=True, is_training=is_training)
             l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4])
 
             flat = flatten(l6)
@@ -35,14 +38,15 @@ class GAN(TripleGAN):
             l7 = tf.layers.dense(inputs=flat, units=90)
             l8 = tf.layers.dense(inputs=l7, units=45)
 
-            logits = tf.layers.dense(inputs=l8, units=2)
+            logits = tf.layers.dense(inputs=l8, units=2)  # 2 units, ie. probability of each class (fake, real)
+            logits_sigmoid = tf.nn.softmax(logits)
 
-        #     return tf.nn.softmax(logits, name="softmax_tensor")
-        return logits
+        # previously used only logits, now returning the 3 for compatibility with triple gan
+        return l8, logits, logits_sigmoid
 
     def generator(self, noise_vector, y=None, scope="generator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
-            batch_size = noise_vector.shape[0]
+            batch_size = self.batch_size
             g_dim = 64  # Number of filters of first layer of generator
             c_dim = 1  # dimensionality of the output
             s = 500  # Final length of the sequence
@@ -117,25 +121,24 @@ class GAN(TripleGAN):
     def build_model(self):
         input_dims = [self.input_height, self.input_width, self.c_dim]
         bs = self.batch_size
-        unlabel_bs = self.unlabelled_batch_size
+
         test_bs = self.test_batch_size
         alpha = self.alpha
-        alpha_cla_adv = self.alpha_cla_adv
+        alpha_cla_adv = self.alpha_cla_adv  # ????
         self.alpha_p = tf.placeholder(tf.float32, name='alpha_p')
         self.gan_lr = tf.placeholder(tf.float32, name='gan_lr')
         self.cla_lr = tf.placeholder(tf.float32, name='cla_lr')
-        self.unsup_weight = tf.placeholder(tf.float32, name='unsup_weight')
+
         self.c_beta1 = tf.placeholder(tf.float32, name='c_beta1')
 
         """ Graph Input """
         # images
-        self.inputs = tf.placeholder(tf.float32, [bs] + input_dims, name='real_images')
-        self.unlabelled_inputs = tf.placeholder(tf.float32, [unlabel_bs] + input_dims, name='unlabelled_images')
-        self.test_inputs = tf.placeholder(tf.float32, [test_bs] + input_dims, name='test_images')
+        self.inputs = tf.placeholder(tf.float32, [bs] + input_dims, name='real_sequences')
+        self.test_inputs = tf.placeholder(tf.float32, [test_bs] + input_dims, name='test_sequences')
 
         # labels
         self.y = tf.placeholder(tf.float32, [bs, self.y_dim], name='y')
-        self.unlabelled_inputs_y = tf.placeholder(tf.float32, [unlabel_bs, self.y_dim])
+
         self.test_label = tf.placeholder(tf.float32, [test_bs, self.y_dim], name='test_label')
         self.visual_y = tf.placeholder(tf.float32, [self.visual_num, self.y_dim], name='visual_y')
 
@@ -144,50 +147,34 @@ class GAN(TripleGAN):
         self.visual_z = tf.placeholder(tf.float32, [self.visual_num, self.z_dim], name='visual_z')
 
         """ Loss Function """
-        # A Game with Three Players
+        # A Game with two Players
 
         # output of D for real images
         D_real, D_real_logits, _ = self.discriminator(self.inputs, self.y, is_training=True, reuse=False)
 
         # output of D for fake images
-        G = self.generator(self.z, self.y, is_training=True, reuse=False)
-        D_fake, D_fake_logits, _ = self.discriminator(G, self.y, is_training=True, reuse=True)
-
-        # output of C for real images
-        C_real_logits = self.classifier(self.inputs, is_training=True, reuse=False)
-        R_L = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=C_real_logits))
-
-        # output of D for unlabelled images
-        Y_c = self.classifier(self.unlabelled_inputs, is_training=True, reuse=True)
-        D_cla, D_cla_logits, _ = self.discriminator(self.unlabelled_inputs, Y_c, is_training=True, reuse=True)
-
-        # output of C for fake images
-        C_fake_logits = self.classifier(G, is_training=True, reuse=True)
-        R_P = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=C_fake_logits))
+        G_approx_gene, G_gene = self.generator(self.z, self.y, is_training=True, reuse=False)
+        D_fake, D_fake_logits, _ = self.discriminator(G_gene, self.y, is_training=True, reuse=True)
 
         #
 
         # get loss for discriminator
-        d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_real_logits, labels=tf.ones_like(D_real)))
-        d_loss_fake = (1-alpha)*tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.zeros_like(D_fake)))
-        d_loss_cla = alpha*tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_cla_logits, labels=tf.zeros_like(D_cla)))
-        self.d_loss = d_loss_real + d_loss_fake + d_loss_cla
+        d_loss_real = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_real_logits, labels=tf.ones_like(D_real_logits)))
+        d_loss_fake = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.zeros_like(D_fake_logits)))
+
+        self.d_loss = d_loss_real + d_loss_fake
 
         # get loss for generator
-        self.g_loss = (1-alpha)*tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake)))
+        self.g_loss = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake_logits)))
 
+        # TODO: instead of classifier, use discriminator for this task?
         # test loss for classify
-        test_Y = self.classifier(self.test_inputs, is_training=False, reuse=True)
-        correct_prediction = tf.equal(tf.argmax(test_Y, 1), tf.argmax(self.test_label, 1))
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-        # get loss for classify
-        max_c = tf.cast(tf.argmax(Y_c, axis=1), tf.float32)
-        c_loss_dis = tf.reduce_mean(max_c * tf.nn.softmax_cross_entropy_with_logits(logits=D_cla_logits, labels=tf.ones_like(D_cla)))
-        # self.c_loss = alpha * c_loss_dis + R_L + self.alpha_p*R_P
-
-        # R_UL = self.unsup_weight * tf.reduce_mean(tf.squared_difference(Y_c, self.unlabelled_inputs_y))
-        self.c_loss = alpha_cla_adv * alpha * c_loss_dis + R_L + self.alpha_p*R_P
+        # test_Y = self.classifier(self.test_inputs, is_training=False, reuse=True)
+        # correct_prediction = tf.equal(tf.argmax(test_Y, 1), tf.argmax(self.test_label, 1))
+        # self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         """ Training """
 
@@ -195,32 +182,30 @@ class GAN(TripleGAN):
         t_vars = tf.trainable_variables()
         d_vars = [var for var in t_vars if 'discriminator' in var.name]
         g_vars = [var for var in t_vars if 'generator' in var.name]
-        c_vars = [var for var in t_vars if 'classifier' in var.name]
 
-        for var in t_vars: print(var.name)
+        # for var in t_vars: print(var.name)
         # optimizers
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            self.d_optim = tf.train.AdamOptimizer(self.gan_lr, beta1=self.GAN_beta1).minimize(self.d_loss, var_list=d_vars)
-            self.g_optim = tf.train.AdamOptimizer(self.gan_lr, beta1=self.GAN_beta1).minimize(self.g_loss, var_list=g_vars)
-            self.c_optim = tf.train.AdamOptimizer(self.cla_lr, beta1=self.beta1, beta2=self.beta2, epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
+            self.d_optim = tf.train.AdamOptimizer(self.gan_lr, beta1=self.GAN_beta1).minimize(self.d_loss,
+                                                                                              var_list=d_vars)
+            self.g_optim = tf.train.AdamOptimizer(self.gan_lr, beta1=self.GAN_beta1).minimize(self.g_loss,
+                                                                                              var_list=g_vars)
 
         """" Testing """
         # for test
-        self.fake_images = self.generator(self.visual_z, self.visual_y, is_training=False, reuse=True)
+        self.fake_sequences = self.generator(self.visual_z, self.visual_y, is_training=False, reuse=True)
 
         """ Summary """
         d_loss_real_sum = tf.summary.scalar("d_loss_real", d_loss_real)
         d_loss_fake_sum = tf.summary.scalar("d_loss_fake", d_loss_fake)
-        d_loss_cla_sum = tf.summary.scalar("d_loss_cla", d_loss_cla)
 
         d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
         g_loss_sum = tf.summary.scalar("g_loss", self.g_loss)
-        c_loss_sum = tf.summary.scalar("c_loss", self.c_loss)
+        # c_loss_sum = tf.summary.scalar("c_loss", self.c_loss)
 
         # final summary operations
         self.g_sum = tf.summary.merge([d_loss_fake_sum, g_loss_sum])
         self.d_sum = tf.summary.merge([d_loss_real_sum, d_loss_sum])
-        self.c_sum = tf.summary.merge([d_loss_cla_sum, c_loss_sum])
 
     def train(self):
 
@@ -245,7 +230,7 @@ class GAN(TripleGAN):
             start_epoch = (int)(checkpoint_counter / self.num_batches)
             start_batch_id = checkpoint_counter - start_epoch * self.num_batches
             counter = checkpoint_counter
-            with open('lr_logs.txt', 'r') as f :
+            with open('lr_logs.txt', 'r') as f:
                 line = f.readlines()
                 line = line[-1]
                 gan_lr = float(line.split()[0])
@@ -257,45 +242,37 @@ class GAN(TripleGAN):
             start_epoch = 0
             start_batch_id = 0
             counter = 1
-            print(" [!] Load failed...")
+            print(" [!] Load failed, starting from epoch 0...")
 
         # loop for epoch
         start_time = time.time()
 
         for epoch in range(start_epoch, self.epoch):
 
-            if epoch >= self.decay_epoch :
+            if epoch >= self.decay_epoch:
                 gan_lr *= 0.995
                 cla_lr *= 0.99
                 print("**** learning rate DECAY ****")
-                print(gan_lr)
-                print(cla_lr)
+                print("GAN lr is now:" + str(gan_lr))
+                print("CLA lr is now" + str(cla_lr))
 
-            if epoch >= self.apply_epoch :
+            if epoch >= self.apply_epoch:
                 alpha_p = self.apply_alpha_p
-            else :
+            else:
                 alpha_p = self.init_alpha_p
-
-            rampup_value = rampup(epoch - 1)
-            unsup_weight = rampup_value * 100.0 if epoch > 1 else 0
 
             # get batch data
             for idx in range(start_batch_id, self.num_batches):
-                batch_images = self.data_X[idx * self.batch_size : (idx + 1) * self.batch_size]
-                batch_codes = self.data_y[idx * self.batch_size : (idx + 1) * self.batch_size]
-
-                batch_unlabelled_images = self.unlabelled_X[idx * self.unlabelled_batch_size : (idx + 1) * self.unlabelled_batch_size]
-                batch_unlabelled_images_y = self.unlabelled_y[idx * self.unlabelled_batch_size : (idx + 1) * self.unlabelled_batch_size]
-
+                batch_images = self.data_X[idx * self.batch_size: (idx + 1) * self.batch_size]
+                batch_codes = self.data_y[idx * self.batch_size: (idx + 1) * self.batch_size]
+                print(self.data_X.shape)
+                print("Shape of batch images" + str(batch_images.shape))
                 batch_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
 
                 feed_dict = {
                     self.inputs: batch_images, self.y: batch_codes,
-                    self.unlabelled_inputs: batch_unlabelled_images,
-                    self.unlabelled_inputs_y: batch_unlabelled_images_y,
                     self.z: batch_z, self.alpha_p: alpha_p,
                     self.gan_lr: gan_lr, self.cla_lr: cla_lr,
-                    self.unsup_weight : unsup_weight
                 }
                 # update D network
                 _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
@@ -305,14 +282,10 @@ class GAN(TripleGAN):
                 _, summary_str_g, g_loss = self.sess.run([self.g_optim, self.g_sum, self.g_loss], feed_dict=feed_dict)
                 self.writer.add_summary(summary_str_g, counter)
 
-                # update C network
-                _, summary_str_c, c_loss = self.sess.run([self.c_optim, self.c_sum, self.c_loss], feed_dict=feed_dict)
-                self.writer.add_summary(summary_str_c, counter)
-
                 # display training status
                 counter += 1
-                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f, c_loss: %.8f" \
-                      % (epoch, idx, self.num_batches, time.time() - start_time, d_loss, g_loss, c_loss))
+                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+                      % (epoch, idx, self.num_batches, time.time() - start_time, d_loss, g_loss))
 
                 # save training results for every 100 steps
                 """
@@ -327,30 +300,30 @@ class GAN(TripleGAN):
                 """
 
             # classifier test
-            test_acc = 0.0
+            # test_acc = 0.0
+            #
+            # for idx in range(10) :
+            #     test_batch_x = self.test_X[idx * self.test_batch_size : (idx+1) * self.test_batch_size]
+            #     test_batch_y = self.test_y[idx * self.test_batch_size : (idx+1) * self.test_batch_size]
+            #
+            #     acc_ = self.sess.run(self.accuracy, feed_dict={
+            #         self.test_inputs: test_batch_x,
+            #         self.test_label: test_batch_y
+            #     })
+            #
+            #     test_acc += acc_
+            # test_acc /= 10
 
-            for idx in range(10) :
-                test_batch_x = self.test_X[idx * self.test_batch_size : (idx+1) * self.test_batch_size]
-                test_batch_y = self.test_y[idx * self.test_batch_size : (idx+1) * self.test_batch_size]
+            # summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
+            # self.writer.add_summary(summary_test, epoch)
 
-                acc_ = self.sess.run(self.accuracy, feed_dict={
-                    self.test_inputs: test_batch_x,
-                    self.test_label: test_batch_y
-                })
-
-                test_acc += acc_
-            test_acc /= 10
-
-            summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
-            self.writer.add_summary(summary_test, epoch)
-
-            line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
-            print(line)
+            # line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
+            # print(line)
             lr = "{} {}".format(gan_lr, cla_lr)
-            with open('logs.txt', 'a') as f:
-                f.write(line)
-            with open('lr_logs.txt', 'a') as f :
-                f.write(lr+'\n')
+            # with open('logs.txt', 'a') as f:
+            #     f.write(line)
+            with open('lr_logs.txt', 'a') as f:
+                f.write(lr + '\n')
 
             # After an epoch, start_batch_id is set to zero
             # non-zero value is only for the first epoch after loading pre-trained model
@@ -360,7 +333,7 @@ class GAN(TripleGAN):
             self.save(self.checkpoint_dir, counter)
 
             # show temporal results
-            self.visualize_results(epoch)
+            # self.visualize_results(epoch)
 
             # save model for final step
         self.save(self.checkpoint_dir, counter)

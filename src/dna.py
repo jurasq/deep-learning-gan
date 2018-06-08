@@ -8,7 +8,7 @@ class_num = 10
 image_size = 32
 img_channels = 3
 
-def prepare_data(n,m):
+def prepare_data(n, m):
     num_classes = 2 #Number of classes
 
     (train_data, train_labels), (test_data, test_labels) = load_dna_data(n, m, "../Data", ["Human"], 1)
@@ -117,7 +117,8 @@ def load_dna_data(num_train, num_test, base_folder, species, samples):
         x_test = np.append(x_test, raw_spec_data[test_idx])
         y_test = np.append(y_test, spec_labels[test_idx])
 
-    return (x_train, y_train), (x_test, y_test)
+    #FIXME: is this really what we want (height 4, width 500?)
+    return (x_train.T, y_train.T), (x_test.T, y_test.T)
 
 def one_hot_encode_string(string):
     cats = ['A', 'C', 'T', 'G']
