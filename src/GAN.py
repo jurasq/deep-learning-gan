@@ -13,8 +13,10 @@ class GAN(TripleGAN):
                            nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir)
         self.model_name = "(Standard) GAN"  # for checkpoint
         self.alpha = 0  # #so that discriminator loss = D_loss_real + D_loss_fake
+
         self.lr_d = lr_d
         self.lr_g = lr_g
+
 
         print("Initializing GAN with d_lr=%f, g_lr=%f" % (self.lr_d, self.lr_g))
 
@@ -64,7 +66,9 @@ class GAN(TripleGAN):
             # this is a magic number which I'm not sure what means yet
             magic_number = 5
 
-            h0 = tf.reshape(noise_vector, [batch_size, int(width / 4), s16 + 1, magic_number])
+            output_mlp=mlp('mlp',noise_vector,batch_norm=False,relu=False)
+
+            h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
             h0 = tf.nn.relu(h0)
             # Dimensions of h0 = batch_size x 1 x 31 x magic_number
 
