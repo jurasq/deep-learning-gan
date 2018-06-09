@@ -8,15 +8,15 @@ import time
 
 class GAN(TripleGAN):
     def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
-                 n, gan_lr, cla_lr, checkpoint_dir, result_dir, log_dir):
+                 nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir):
         TripleGAN.__init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
-                           n, gan_lr, cla_lr, checkpoint_dir, result_dir, log_dir)
+                           nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir)
         self.model_name = "(Standard) GAN"  # for checkpoint
         self.alpha = 0  # #so that discriminator loss = D_loss_real + D_loss_fake
-        self.gan_lr_d = gan_lr / 10000
-        self.gan_lr_g = cla_lr
+        self.lr_d = lr_d
+        self.lr_g = lr_g
 
-        print("Initializing GAN with d_lr=%f, g_lr=%f" %(self.gan_lr_d, self.gan_lr_g))
+        print("Initializing GAN with d_lr=%f, g_lr=%f" % (self.lr_d, self.lr_g))
 
     def discriminator(self, dna_sequence, y_=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
@@ -124,9 +124,7 @@ class GAN(TripleGAN):
 
     def build_model(self):
         input_dims = [self.input_height, self.input_width, self.c_dim]
-        bs = self.batch_size
 
-        test_bs = self.test_batch_size
         alpha = self.alpha
         alpha_cla_adv = self.alpha_cla_adv  # ????
         self.alpha_p = tf.placeholder(tf.float32, name='alpha_p')
@@ -137,17 +135,17 @@ class GAN(TripleGAN):
 
         """ Graph Input """
         # images
-        self.inputs = tf.placeholder(tf.float32, [bs] + input_dims, name='real_sequences')
-        self.test_inputs = tf.placeholder(tf.float32, [test_bs] + input_dims, name='test_sequences')
+        self.inputs = tf.placeholder(tf.float32, [self.batch_size] + input_dims, name='real_sequences')
+        self.test_inputs = tf.placeholder(tf.float32, [self.test_batch_size] + input_dims, name='test_sequences')
 
         # labels
-        self.y = tf.placeholder(tf.float32, [bs, self.y_dim], name='y')
+        self.y = tf.placeholder(tf.float32, [self.batch_size, self.y_dim], name='y')
 
-        self.test_label = tf.placeholder(tf.float32, [test_bs, self.y_dim], name='test_label')
+        self.test_label = tf.placeholder(tf.float32, [self.batch_size, self.y_dim], name='test_label')
         self.visual_y = tf.placeholder(tf.float32, [self.visual_num, self.y_dim], name='visual_y')
 
         # noises
-        self.z = tf.placeholder(tf.float32, [bs, self.z_dim], name='z')
+        self.z = tf.placeholder(tf.float32, [self.batch_size, self.z_dim], name='z')
         self.visual_z = tf.placeholder(tf.float32, [self.visual_num, self.z_dim], name='visual_z')
 
         """ Loss Function """
@@ -190,10 +188,10 @@ class GAN(TripleGAN):
         # for var in t_vars: print(var.name)
         # optimizers
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            self.d_optim = tf.train.AdamOptimizer(self.gan_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
-                                                                                              var_list=d_vars)
-            self.g_optim = tf.train.AdamOptimizer(self.gan_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
-                                                                                              var_list=g_vars)
+            self.d_optim = tf.train.AdamOptimizer(self.lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
+                                                                                            var_list=d_vars)
+            self.g_optim = tf.train.AdamOptimizer(self.lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
+                                                                                            var_list=g_vars)
 
         """" Testing """
         # for test
