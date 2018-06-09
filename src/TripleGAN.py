@@ -5,7 +5,7 @@ import time
 
 class TripleGAN(object):
     def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
-                 n, gan_lr, cla_lr, checkpoint_dir, result_dir, log_dir):
+                 nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir):
         self.sess = sess
         self.dataset_name = dataset_name
         self.checkpoint_dir = checkpoint_dir
@@ -27,9 +27,13 @@ class TripleGAN(object):
             self.y_dim = 2  # Number of labels
             self.c_dim = 1  # "Colour" dimension
 
-            # These values are left as is for now (3/6/2018)
-            self.learning_rate = gan_lr  # 3e-4, 1e-3
-            self.cla_learning_rate = cla_lr  # 3e-3, 1e-2 ?
+            # Learning rates: discriminator, generator, classifier
+            self.lr_d = lr_d
+            self.lr_g = lr_g
+            self.lr_c = lr_c
+
+            # self.learning_rate = gan_lr  # 3e-4, 1e-3
+            # self.cla_learning_rate = cla_lr  # 3e-3, 1e-2 ?
             self.GAN_beta1 = 0.5  # D and G, exponential decay rate for the 1st moment estimates
             self.beta1 = 0.9  # C, exponential decay rate for the 1st moment estimates
             self.beta2 = 0.999  # C, exponential decay rate for the 2nd moment estimates
@@ -49,11 +53,12 @@ class TripleGAN(object):
             self.len_discrete_code = 4  # Think this is one-hot encoding for visualization ?
 
             self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(
-                n, self.test_batch_size)  # trainX, trainY, testX, testY
+                nexamples, self.test_batch_size)  # trainX, trainY, testX, testY
 
             self.num_batches = len(self.data_X) // self.batch_size
 
         else:
+            print("Dataset not supported.")
             raise NotImplementedError
 
     def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):

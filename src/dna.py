@@ -8,14 +8,14 @@ class_num = 10
 image_size = 32
 img_channels = 3
 
-def prepare_data(n, m):
+def prepare_data(nexamples_train, nexamples_test):
     num_classes = 2 #Number of classes
 
-    (train_data, train_labels), (test_data, test_labels) = load_dna_data(n, m, "../Data", ["Human"], 1)
+    (train_data, train_labels), (test_data, test_labels) = load_dna_data(nexamples_train, nexamples_test, "../Data", ["Human"], 1)
 
     #Pre-processing should happen here if wanted if wanted. We have processed data.
 
-    criteria = n//num_classes
+    criteria = nexamples_train // num_classes
     input_dict, labelled_x, labelled_y, unlabelled_x, unlabelled_y = defaultdict(int), list(), list(), list(), list()
 
     for image, label in zip(train_data,train_labels) :
