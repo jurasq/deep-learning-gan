@@ -111,3 +111,9 @@ old_logs/
 Data/
 data/
 data_encoded/
+
+
+.idea/workspace.xml
+
+#checkpoints
+src/checkpoint/
