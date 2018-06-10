@@ -72,7 +72,7 @@ def main():
     # open session
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         gan = GAN(sess, epoch=args.epoch, batch_size=args.batch_size, unlabel_batch_size=args.unlabel_batch_size,
-                  z_dim=args.z_dim, dataset_name=args.dataset, nexamples=args.n, lr_g = args.lr_g, lr_c = args.lr_c,
+                  z_dim=args.z_dim, dataset_name=args.dataset, nexamples=args.n, lr_d = args.lr_d, lr_g = args.lr_g, lr_c = args.lr_c,
                   checkpoint_dir=args.checkpoint_dir, result_dir=args.result_dir, log_dir=args.log_dir)
 
         # build graph
