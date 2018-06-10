@@ -217,8 +217,8 @@ class GAN(TripleGAN):
 
         # initialize all variables
         tf.global_variables_initializer().run()
-        gan_lr = self.learning_rate
-        cla_lr = self.cla_learning_rate
+        gan_lr = self.lr_g
+        cla_lr = self.lr_c
 
         # graph inputs for visualize training results
         self.sample_z = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
