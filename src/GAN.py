@@ -145,7 +145,7 @@ class GAN(TripleGAN):
         # labels
         self.y = tf.placeholder(tf.float32, [self.batch_size, self.y_dim], name='y')
 
-        self.test_label = tf.placeholder(tf.float32, [self.batch_size, self.y_dim], name='test_label')
+        self.test_label = tf.placeholder(tf.float32, [self.test_batch_size, self.y_dim], name='test_label')
         self.visual_y = tf.placeholder(tf.float32, [self.visual_num, self.y_dim], name='visual_y')
 
         # noises
