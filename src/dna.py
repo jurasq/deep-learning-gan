@@ -118,9 +118,13 @@ def load_dna_data(num_train, num_test, base_folder, species, samples):
         y_test = np.append(y_test, spec_labels[test_idx])
 
     #FIXME: this has hardcoded length, maybe use the ones from intialization
-    x_train = x_train.reshape((-1, 4, 500, 1))
-    x_test = x_test.reshape((-1, 4, 500, 1))
+    SEQ_LEN = 500
+    x_train = x_train.reshape((-1, SEQ_LEN, 4, 1)).transpose(0, 2, 1, 3)
+    x_test = x_test.reshape((-1, SEQ_LEN, 4, 1)).transpose(0, 2, 1, 3)
 
+    #Check for bugs
+    for i in range(x_train.shape[0]):
+        assert sum(sum(x_train[i, :, :, 0] == 1) == 1) == SEQ_LEN
     print("Sample training example:")
     print(x_train[0, :, :, 0])
     return (x_train, y_train), (x_test, y_test)
