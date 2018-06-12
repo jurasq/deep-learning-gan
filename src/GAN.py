@@ -17,7 +17,6 @@ class GAN(TripleGAN):
         self.lr_d = lr_d
         self.lr_g = lr_g
 
-
         print("Initializing GAN with lr_d=%.3g, lr_g=%.3g" % (self.lr_d, self.lr_g))
 
     def discriminator(self, dna_sequence, y_=None, scope="discriminator", is_training=True, reuse=False):
@@ -233,7 +232,7 @@ class GAN(TripleGAN):
         # restore check-point if it exits
         could_load, checkpoint_counter = self.load(self.checkpoint_dir)
         if could_load:
-            start_epoch = (int)(checkpoint_counter / self.num_batches)
+            start_epoch = int(checkpoint_counter / self.num_batches)
             start_batch_id = checkpoint_counter - start_epoch * self.num_batches
             counter = checkpoint_counter
             with open('lr_logs.txt', 'r') as f:
