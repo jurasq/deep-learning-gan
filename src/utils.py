@@ -13,8 +13,9 @@ def check_folder(log_dir):
         os.makedirs(log_dir)
     return log_dir
 
-def save_images(images, size, image_path):
-    return imsave(inverse_transform(images), size, image_path)
+def save_sequences(sequences, filepath):
+    #TODO: write this
+    pass
 
 def imsave(images, size, path):
     pass
