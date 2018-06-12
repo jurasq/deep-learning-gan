@@ -3,6 +3,7 @@ from ops import *
 from utils import *
 import time
 
+
 class TripleGAN(object):
     def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
                  nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir):
@@ -14,7 +15,7 @@ class TripleGAN(object):
         self.epoch = epoch
         self.batch_size = batch_size
         self.unlabelled_batch_size = unlabel_batch_size
-        self.test_batch_size = 1000
+        self.test_batch_size = 100
         self.model_name = "TripleGAN"  # name for checkpoint
 
         if self.dataset_name == 'dna':
@@ -39,7 +40,7 @@ class TripleGAN(object):
             # in the Kingma and Ba paper (in the formula just before Section 2.1),
             # not the epsilon in Algorithm 1 of the paper.
             self.epsilon = 1e-8
-            self.alpha = 0.5 # discriminator loss: (1-alpha) * D_loss_fake + alpha * D_loss_classifier + D_loss_real
+            self.alpha = 0.5  # discriminator loss: (1-alpha) * D_loss_fake + alpha * D_loss_classifier + D_loss_real
             self.alpha_cla_adv = 0.01
             self.init_alpha_p = 0.0  # 0.1, 0.03
             self.apply_alpha_p = 0.1
@@ -47,7 +48,7 @@ class TripleGAN(object):
             self.decay_epoch = 50  # Point in epoch we start adding decay. if epoch >= decay_epoch, add decay. Note decay is hard coded.
 
             self.sample_num = 64  # ? Unused for now
-            self.visual_num = 15  # Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
+            self.generated_batch_size = 15  # Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
             self.len_discrete_code = 4  # Think this is one-hot encoding for visualization ?
 
             self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(
@@ -59,31 +60,33 @@ class TripleGAN(object):
             print("Dataset not supported.")
             raise NotImplementedError
 
+        print("Initializing TripleGAN with lr_d=%.3g, lr_g=%.3g, lr_c=%.3g" % (self.lr_d, self.lr_g, self.lr_c))
+
     def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
-        with tf.variable_scope(scope, reuse=reuse) :
+        with tf.variable_scope(scope, reuse=reuse):
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
 
-            x = conv_concat(x,y)
+            x = conv_concat(x, y)
             x = conv_layer(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
             x = max_pool_layer(name_scope="max_pool_1", input_tensor=x, pool_size=[1, 3])
 
-            x = conv_concat(x,y)
+            x = conv_concat(x, y)
             x = conv_layer(name_scope="convolutional_2", input_tensor=x, num_kernels=30, kernel_shape=[1, 5])
             x = max_pool_layer(name_scope="max_pool_2", input_tensor=x, pool_size=[1, 4])
 
-            x = conv_concat(x,y)
+            x = conv_concat(x, y)
             x = conv_layer(name_scope="convolutional_3", input_tensor=x, num_kernels=40, kernel_shape=[1, 3])
             x = max_pool_layer(name_scope="max_pool_3", input_tensor=x, pool_size=[1, 4])
 
             x = flatten(x)
 
-            x = concat([x,y_])
+            x = concat([x, y_])
             x = tf.layers.dense(inputs=x, units=90)
             x = tf.layers.dense(inputs=x, units=45)
             logits = tf.layers.dense(inputs=x, units=2)
             logits_sigmoid = tf.nn.softmax(logits)
 
-            return x , logits, logits_sigmoid
+            return x, logits, logits_sigmoid
 
     def generator(self, noise_vector, y_, scope="generator", is_training=True, reuse=False):
 
@@ -165,15 +168,15 @@ class TripleGAN(object):
         return H_conv4, gene
 
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
-        with tf.variable_scope(scope, reuse=reuse) :
+        with tf.variable_scope(scope, reuse=reuse):
             if (reuse):
                 tf.get_variable_scope().reuse_variables()
-                
+
             # TODO: make a reverse filter conv layer like in the Enhancer paper 
 
             # convolutional + pooling #1
-            l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, 
-                            kernel_shape=[4, 9], relu=True)
+            l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20,
+                                          kernel_shape=[4, 9], relu=True)
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3])
 
             # convolutional + pooling #2
@@ -190,7 +193,7 @@ class TripleGAN(object):
             l8 = tf.layers.dense(inputs=l7, units=45)
 
             logits = tf.layers.dense(inputs=l8, units=2)
-            
+
         return tf.nn.softmax(logits, axis=1, name="softmax_tensor")
 
     def build_model(self):
@@ -213,11 +216,11 @@ class TripleGAN(object):
         # labels
         self.y = tf.placeholder(tf.float32, [bs, self.y_dim], name='y')
         self.test_label = tf.placeholder(tf.float32, [test_bs, self.y_dim], name='test_label')
-        self.visual_y = tf.placeholder(tf.float32, [self.visual_num, self.y_dim], name='visual_y')
+        self.visual_y = tf.placeholder(tf.float32, [self.generated_batch_size, self.y_dim], name='visual_y')
 
         # noises
         self.z = tf.placeholder(tf.float32, [bs, self.z_dim], name='z')
-        self.visual_z = tf.placeholder(tf.float32, [self.visual_num, self.z_dim], name='visual_z')
+        self.visual_z = tf.placeholder(tf.float32, [self.generated_batch_size, self.z_dim], name='visual_z')
 
         """ Loss Function """
         # A Game with Three Players
@@ -233,8 +236,6 @@ class TripleGAN(object):
         C_real_logits = self.classifier(self.inputs, is_training=True, reuse=False)
         R_L = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=C_real_logits))
 
-
-
         # output of C for fake images
         C_fake_logits = self.classifier(G_gene, is_training=True, reuse=True)
         R_P = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=C_fake_logits))
@@ -242,12 +243,15 @@ class TripleGAN(object):
         #
 
         # get loss for discriminator
-        d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_real_logits, labels=tf.ones_like(D_real_logits)))
-        d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.zeros_like(D_fake_logits)))
-        self.d_loss = d_loss_real + d_loss_fake 
+        d_loss_real = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_real_logits, labels=tf.ones_like(D_real_logits)))
+        d_loss_fake = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.zeros_like(D_fake_logits)))
+        self.d_loss = d_loss_real + d_loss_fake
 
         # get loss for generator
-        self.g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake_logits)))
+        self.g_loss = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake_logits)))
 
         # test loss for classify
         test_Y = self.classifier(self.test_inputs, is_training=False, reuse=True)
@@ -260,7 +264,7 @@ class TripleGAN(object):
         # self.c_loss = alpha * c_loss_dis + R_L + self.alpha_p*R_P
 
         # R_UL = self.unsup_weight * tf.reduce_mean(tf.squared_difference(Y_c, self.unlabelled_inputs_y))
-        self.c_loss =  R_L + self.alpha_p*R_P
+        self.c_loss = R_L + self.alpha_p * R_P
 
         """ Training """
 
@@ -272,9 +276,12 @@ class TripleGAN(object):
 
         # optimizers
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss, var_list=d_vars)
-            self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss, var_list=g_vars)
-            self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.beta1, beta2=self.beta2, epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
+            self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
+                                                                                               var_list=d_vars)
+            self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
+                                                                                               var_list=g_vars)
+            self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.beta1, beta2=self.beta2,
+                                                  epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
 
         """" Testing """
         # for test
@@ -283,7 +290,6 @@ class TripleGAN(object):
         """ Summary """
         d_loss_real_sum = tf.summary.scalar("d_loss_real", d_loss_real)
         d_loss_fake_sum = tf.summary.scalar("d_loss_fake", d_loss_fake)
-
 
         d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
         g_loss_sum = tf.summary.scalar("g_loss", self.g_loss)
@@ -302,10 +308,9 @@ class TripleGAN(object):
         lr_g = self.lr_g
         lr_c = self.lr_c
 
-
         # graph inputs for visualize training results
-        self.sample_z = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
-        self.test_codes = self.data_y[0:self.visual_num]
+        self.visual_sample_z = np.random.uniform(-1, 1, size=(self.generated_batch_size, self.z_dim))
+        self.test_codes = self.data_y[0:self.generated_batch_size]
 
         # saver to save model
         self.saver = tf.train.Saver()
@@ -319,7 +324,7 @@ class TripleGAN(object):
             start_epoch = (int)(checkpoint_counter / self.num_batches)
             start_batch_id = checkpoint_counter - start_epoch * self.num_batches
             counter = checkpoint_counter
-            with open('lr_logs.txt', 'r') as f :
+            with open('lr_logs.txt', 'r') as f:
                 line = f.readlines()
                 line = line[-1]
                 lr_d = float(line.split()[0])
@@ -349,9 +354,9 @@ class TripleGAN(object):
                 print("lr_g is now: %.3g" % lr_g)
                 print("lr_c is now: %.3g" % lr_c)
 
-            if epoch >= self.apply_epoch :
+            if epoch >= self.apply_epoch:
                 alpha_p = self.apply_alpha_p
-            else :
+            else:
                 alpha_p = self.init_alpha_p
 
             # rampup_value = rampup(epoch - 1)
@@ -359,8 +364,8 @@ class TripleGAN(object):
 
             # get batch data
             for idx in range(start_batch_id, self.num_batches):
-                batch_images = self.data_X[idx * self.batch_size : (idx + 1) * self.batch_size]
-                batch_codes = self.data_y[idx * self.batch_size : (idx + 1) * self.batch_size]
+                batch_images = self.data_X[idx * self.batch_size: (idx + 1) * self.batch_size]
+                batch_codes = self.data_y[idx * self.batch_size: (idx + 1) * self.batch_size]
 
                 batch_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
 
@@ -401,9 +406,9 @@ class TripleGAN(object):
             # classifier test
             test_acc = 0.0
 
-            for idx in range(10) :
-                test_batch_x = self.test_X[idx * self.test_batch_size : (idx+1) * self.test_batch_size]
-                test_batch_y = self.test_y[idx * self.test_batch_size : (idx+1) * self.test_batch_size]
+            for idx in range(10):
+                test_batch_x = self.test_X[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
+                test_batch_y = self.test_y[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
 
                 acc_ = self.sess.run(self.accuracy, feed_dict={
                     self.test_inputs: test_batch_x,
@@ -423,7 +428,7 @@ class TripleGAN(object):
 
             lr = "{} {} {}".format(lr_d, lr_g, lr_c)
             with open('lr_logs.txt', 'a') as f:
-                f.write(lr+'\n')
+                f.write(lr + '\n')
 
             # After an epoch, start_batch_id is set to zero
             # non-zero value is only for the first epoch after loading pre-trained model
@@ -440,14 +445,14 @@ class TripleGAN(object):
 
     def visualize_results(self, epoch):
         # tot_num_samples = min(self.sample_num, self.batch_size)
-        image_frame_dim = int(np.floor(np.sqrt(self.visual_num)))
-        z_sample = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
+        image_frame_dim = int(np.floor(np.sqrt(self.generated_batch_size)))
+        z_sample = np.random.uniform(-1, 1, size=(self.generated_batch_size, self.z_dim))
 
         """ random noise, random discrete code, fixed continuous code """
-        #y = np.random.choice(self.len_discrete_code, self.visual_num)
+        # y = np.random.choice(self.len_discrete_code, self.visual_num)
         # Generated 10 labels with batch_size
-        y_one_hot = np.zeros((self.visual_num, self.y_dim))
-        #y_one_hot[np.arange(self.visual_num), y] = 1
+        y_one_hot = np.zeros((self.generated_batch_size, self.y_dim))
+        # y_one_hot[np.arange(self.visual_num), y] = 1
 
         samples = self.sess.run(self.fake_sequences, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
 
@@ -472,8 +477,8 @@ class TripleGAN(object):
             y_one_hot[np.arange(self.visual_num), y] = 1
 
             samples = self.sess.run(self.fake_images, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
-            save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
-                        check_folder(
+            save_sequences(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
+                           check_folder(
                             self.result_dir + '/' + self.model_dir + '/class_%d' % l) + '/' + self.model_name + '_epoch%03d' % epoch + '_test_class_%d.png' % l)
 
             samples = samples[si, :, :, :]
@@ -489,9 +494,74 @@ class TripleGAN(object):
             for c in range(self.len_discrete_code):
                 canvas[s * self.len_discrete_code + c, :, :, :] = all_samples[c * n_styles + s, :, :, :]
 
-        save_images(canvas, [n_styles, self.len_discrete_code],
-                    check_folder(
+        save_sequences(canvas, [n_styles, self.len_discrete_code],
+                       check_folder(
                         self.result_dir + '/' + self.model_dir + '/all_classes_style_by_style') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes_style_by_style.png')
+
+    def generate_and_save_samples(self, visual_sample_z, epoch):
+        saving_start_time = time.time()
+        # save some (15) generated sequences for every epoch
+        samples = self.sess.run(self.fake_sequences,
+                                feed_dict={self.visual_z: visual_sample_z})
+        save_sequences(samples,
+                       './' + check_folder(
+                           self.result_dir + '/' + self.model_dir) + '/' + self.model_name + '_generated_sequences_epoch_{:02d}.txt'.format(
+                           epoch))
+        saving_end_time = time.time()
+        print("Saved %d generated samples to file, took %4.4f" % (
+            self.generated_batch_size, saving_end_time - saving_start_time))
+
+    def test_and_save_accuracy(self, epoch):
+        # testing the accuracy (enhancers vs nonenhancers) of discriminator
+        test_acc = 0.0
+
+        for idx in range(10):
+            test_batch_x = self.test_X[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
+            test_batch_y = self.test_y[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
+
+            acc_ = self.sess.run(self.accuracy, feed_dict={
+                self.test_inputs: test_batch_x,
+                self.test_label: test_batch_y
+            })
+
+            test_acc += acc_
+        test_acc /= 10
+
+        summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
+        self.writer.add_summary(summary_test, epoch)
+
+        line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
+        print(line)
+        with open('accuracy.txt', 'a') as f:
+            f.write(line)
+
+    def save_learning_rates(self, lr_d, lr_g, lr_c=None):
+        if lr_c:
+            pass
+        else:
+            lr = "{} {}".format(lr_d, lr_g)
+            with open('lr_logs.txt', 'a') as f:
+                f.write(lr + '\n')
+
+    def update_learning_rates(self, epoch, lr_d, lr_g, lr_c=None):
+        if lr_c:
+            if epoch >= self.decay_epoch:
+                lr_d *= 0.995
+                lr_g *= 0.995
+                lr_c *= 0.99
+                print("**** learning rate DECAY ****")
+                print("lr_d is now: %.3g" % lr_d)
+                print("lr_g is now: %.3g" % lr_g)
+                print("lr_c is now: %.3g" % lr_c)
+        else:
+            if epoch >= self.decay_epoch:
+                lr_d *= 0.995
+                lr_g *= 0.99
+                print("**** learning rate DECAY ****")
+                print("lr_d lr is now: %.3g" % lr_d)
+                print("lr_g lr is now: %.3g" % lr_g)
+
+        return lr_d, lr_g, lr_c
 
     @property
     def model_dir(self):

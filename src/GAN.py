@@ -14,12 +14,9 @@ class GAN(TripleGAN):
         self.model_name = "(Standard) GAN"  # for checkpoint
         self.alpha = 0  # #so that discriminator loss = D_loss_real + D_loss_fake
 
-        self.lr_d = lr_d
-        self.lr_g = lr_g
-
         print("Initializing GAN with lr_d=%.3g, lr_g=%.3g" % (self.lr_d, self.lr_g))
 
-    def discriminator(self, dna_sequence, y_=None, scope="discriminator", is_training=True, reuse=False):
+    def discriminator(self, dna_sequence, y=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # TODO: make a reverse filter conv layer like in the Enhancer paper
 
@@ -128,37 +125,35 @@ class GAN(TripleGAN):
     def build_model(self):
         input_dims = [self.input_height, self.input_width, self.c_dim]
 
-
-        self.alpha_p = tf.placeholder(tf.float32, name='alpha_p')
+        # Placeholders for learning rates for discriminator and generator
         self.tf_lr_d = tf.placeholder(tf.float32, name='lr_d')
         self.tf_lr_g = tf.placeholder(tf.float32, name='lr_g')
 
-        self.c_beta1 = tf.placeholder(tf.float32, name='c_beta1')
-
         """ Graph Input """
-        # images
+        # Train sequences, shape: [batch_size, 4, 500, 1]
         self.inputs = tf.placeholder(tf.float32, [self.batch_size] + input_dims, name='real_sequences')
+        # Test sequences, shape: [test_batch_size, 4, 500, 1]
         self.test_inputs = tf.placeholder(tf.float32, [self.test_batch_size] + input_dims, name='test_sequences')
 
-        # labels
-        self.y = tf.placeholder(tf.float32, [self.batch_size, self.y_dim], name='y')
-
+        # Test labels, shape: [test_batch_size, 2], one hot encoded
         self.test_label = tf.placeholder(tf.float32, [self.test_batch_size, self.y_dim], name='test_label')
-        self.visual_y = tf.placeholder(tf.float32, [self.visual_num, self.y_dim], name='visual_y')
 
-        # noises
+        # Labels for the generated sequences - this is not really needed
+        self.visual_y = tf.placeholder(tf.float32, [self.generated_batch_size, self.y_dim], name='visual_y')
+
+        # noises, shape: [batch_size, z_dim
         self.z = tf.placeholder(tf.float32, [self.batch_size, self.z_dim], name='z')
-        self.visual_z = tf.placeholder(tf.float32, [self.visual_num, self.z_dim], name='visual_z')
+        self.visual_z = tf.placeholder(tf.float32, [self.generated_batch_size, self.z_dim], name='visual_z')
 
         """ Loss Function """
         # A Game with two Players
 
         # output of D for real images
-        D_real, D_real_logits, _ = self.discriminator(self.inputs, self.y, is_training=True, reuse=False)
+        D_real, D_real_logits, _ = self.discriminator(self.inputs, y=None, is_training=True, reuse=False)
 
         # output of D for fake images
-        G_approx_gene, G_gene = self.generator(self.z, self.y, is_training=True, reuse=False)
-        D_fake, D_fake_logits, _ = self.discriminator(G_gene, self.y, is_training=True, reuse=True)
+        G_approx_gene, G_gene = self.generator(self.z, y=None, is_training=True, reuse=False)
+        D_fake, D_fake_logits, _ = self.discriminator(G_gene, y=None, is_training=True, reuse=True)
 
         #
 
@@ -174,11 +169,10 @@ class GAN(TripleGAN):
         self.g_loss = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake_logits)))
 
-        # TODO: instead of classifier, use discriminator for this task?
-        # test loss for classify
-        # test_Y = self.classifier(self.test_inputs, is_training=False, reuse=True)
-        # correct_prediction = tf.equal(tf.argmax(test_Y, 1), tf.argmax(self.test_label, 1))
-        # self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        # test loss for classification using the discriminator
+        _, _, predicted_test_logits = self.discriminator(self.test_inputs, is_training=False, reuse=True)
+        correct_prediction = tf.equal(tf.argmax(predicted_test_logits, 1), tf.argmax(self.test_label, 1))
+        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         """ Training """
 
@@ -195,9 +189,8 @@ class GAN(TripleGAN):
             self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
                                                                                             var_list=g_vars)
 
-        """" Testing """
-        # for test
-        self.fake_sequences = self.generator(self.visual_z, self.visual_y, is_training=False, reuse=True)
+        """" Generating sequences """
+        self.fake_sequences = self.generator(self.visual_z, y=None, is_training=False, reuse=True)
 
         """ Summary """
         d_loss_real_sum = tf.summary.scalar("d_loss_real", d_loss_real)
@@ -205,7 +198,6 @@ class GAN(TripleGAN):
 
         d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
         g_loss_sum = tf.summary.scalar("g_loss", self.g_loss)
-        # c_loss_sum = tf.summary.scalar("c_loss", self.c_loss)
 
         # final summary operations
         self.g_sum = tf.summary.merge([d_loss_fake_sum, g_loss_sum])
@@ -219,9 +211,8 @@ class GAN(TripleGAN):
         lr_d = self.lr_d
         lr_g = self.lr_g
 
-        # graph inputs for visualize training results
-        self.sample_z = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
-        self.test_codes = self.data_y[0:self.visual_num]
+        # inputs for generating testing sequences
+        visual_sample_z = np.random.uniform(-1, 1, size=(self.generated_batch_size, self.z_dim))
 
         # saver to save model
         self.saver = tf.train.Saver()
@@ -254,27 +245,16 @@ class GAN(TripleGAN):
 
         for epoch in range(start_epoch, self.epoch):
 
-            if epoch >= self.decay_epoch:
-                lr_d *= 0.995
-                lr_g *= 0.99
-                print("**** learning rate DECAY ****")
-                print("lr_d lr is now: %.3g" % lr_d)
-                print("lr_g lr is now: %.3g" % lr_g)
+            lr_d, lr_g = self.update_learning_rates(epoch, lr_d=lr_d, lr_g=lr_g)
 
-            if epoch >= self.apply_epoch:
-                alpha_p = self.apply_alpha_p
-            else:
-                alpha_p = self.init_alpha_p
-
-            # get batch data
+            # One epoch loop
             for idx in range(start_batch_id, self.num_batches):
-                batch_images = self.data_X[idx * self.batch_size: (idx + 1) * self.batch_size]
-                batch_codes = self.data_y[idx * self.batch_size: (idx + 1) * self.batch_size]
+                batch_sequences = self.data_X[idx * self.batch_size: (idx + 1) * self.batch_size]
                 batch_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
 
                 feed_dict = {
-                    self.inputs: batch_images, self.y: batch_codes,
-                    self.z: batch_z, self.alpha_p: alpha_p,
+                    self.inputs: batch_sequences,
+                    self.z: batch_z,
                     self.tf_lr_d: lr_d, self.tf_lr_g: lr_g,
                 }
                 # update D network
@@ -290,43 +270,14 @@ class GAN(TripleGAN):
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
                       % (epoch, idx, self.num_batches, time.time() - start_time, d_loss, g_loss))
 
-                # save training results for every 100 steps
-                """
-                if np.mod(counter, 100) == 0:
-                    samples = self.sess.run(self.fake_images,
-                                            feed_dict={self.z: self.sample_z, self.y: self.test_codes})
-                    image_frame_dim = int(np.floor(np.sqrt(self.visual_num)))
-                    save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
-                                './' + check_folder(
-                                    self.result_dir + '/' + self.model_dir) + '/' + self.model_name + '_train_{:02d}_{:04d}.png'.format(
-                                    epoch, idx))
-                """
+            """ Save generated samples to a file"""
+            self.generate_and_save_samples(visual_sample_z=visual_sample_z, epoch=epoch);
 
-            # classifier test
-            # test_acc = 0.0
-            #
-            # for idx in range(10) :
-            #     test_batch_x = self.test_X[idx * self.test_batch_size : (idx+1) * self.test_batch_size]
-            #     test_batch_y = self.test_y[idx * self.test_batch_size : (idx+1) * self.test_batch_size]
-            #
-            #     acc_ = self.sess.run(self.accuracy, feed_dict={
-            #         self.test_inputs: test_batch_x,
-            #         self.test_label: test_batch_y
-            #     })
-            #
-            #     test_acc += acc_
-            # test_acc /= 10
+            """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
+            self.test_and_save_accuracy(epoch=epoch)
 
-            # summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
-            # self.writer.add_summary(summary_test, epoch)
-
-            # line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
-            # print(line)
-            lr = "{} {}".format(lr_d, lr_g)
-            # with open('logs.txt', 'a') as f:
-            #     f.write(line)
-            with open('lr_logs.txt', 'a') as f:
-                f.write(lr + '\n')
+            """ Save learning rates to a file in case we wanted to resume later"""
+            self.save_learning_rates(lr_d, lr_g)
 
             # After an epoch, start_batch_id is set to zero
             # non-zero value is only for the first epoch after loading pre-trained model
@@ -335,95 +286,5 @@ class GAN(TripleGAN):
             # save model
             self.save(self.checkpoint_dir, counter)
 
-            # show temporal results
-            self.visualize_results(epoch)
-
             # save model for final step
         self.save(self.checkpoint_dir, counter)
-
-    def visualize_results(self, epoch):
-        #TODO: this works, but doesn't save the generated samples
-        #TODO: this is very hacky (especially the visual_y etc - they are not used, but need to be provided)
-        #TODO: need to adapt this, including changing the variable names and variables so that it's not about images anymore
-        #TODO: and is more robust (e.g. providing None as the y should work).
-        #TODO: otherwise this will be very confusing
-        # tot_num_samples = min(self.sample_num, self.batch_size)
-        image_frame_dim = int(np.floor(np.sqrt(self.visual_num)))
-        z_sample = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
-
-        """ random noise, random discrete code, fixed continuous code """
-        # y = np.random.choice(self.len_discrete_code, self.visual_num)
-        # Generated 10 labels with batch_size
-        y_one_hot = np.zeros((self.visual_num, self.y_dim))
-        # y_one_hot[np.arange(self.visual_num), y] = 1
-
-        samples = self.sess.run(self.fake_sequences, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
-        print("Generated samples:")
-        print(samples)
-        return
-        # save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
-        #             check_folder(
-        #                 self.result_dir + '/' + self.model_dir + '/all_classes') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes.png')
-
-        """ specified condition, random noise """
-        n_styles = 10  # must be less than or equal to self.batch_size
-
-        np.random.seed()
-        si = np.random.choice(self.visual_num, n_styles)
-
-        for l in range(self.len_discrete_code):
-            y = np.zeros(self.visual_num, dtype=np.int64) + l
-            y_one_hot = np.zeros((self.visual_num, self.y_dim))
-            y_one_hot[np.arange(self.visual_num), y] = 1
-
-            samples = self.sess.run(self.fake_images, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
-            save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
-                        check_folder(
-                            self.result_dir + '/' + self.model_dir + '/class_%d' % l) + '/' + self.model_name + '_epoch%03d' % epoch + '_test_class_%d.png' % l)
-
-            samples = samples[si, :, :, :]
-
-            if l == 0:
-                all_samples = samples
-            else:
-                all_samples = np.concatenate((all_samples, samples), axis=0)
-
-        """ save merged images to check style-consistency """
-        canvas = np.zeros_like(all_samples)
-        for s in range(n_styles):
-            for c in range(self.len_discrete_code):
-                canvas[s * self.len_discrete_code + c, :, :, :] = all_samples[c * n_styles + s, :, :, :]
-
-        save_images(canvas, [n_styles, self.len_discrete_code],
-                    check_folder(
-                        self.result_dir + '/' + self.model_dir + '/all_classes_style_by_style') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes_style_by_style.png')
-
-    @property
-    def model_dir(self):
-        return "{}_{}_{}_{}".format(
-            self.model_name, self.dataset_name,
-            self.batch_size, self.z_dim)
-
-    def save(self, checkpoint_dir, step):
-        checkpoint_dir = os.path.join(checkpoint_dir, self.model_dir, self.model_name)
-
-        if not os.path.exists(checkpoint_dir):
-            os.makedirs(checkpoint_dir)
-
-        self.saver.save(self.sess, os.path.join(checkpoint_dir, self.model_name + '.model'), global_step=step)
-
-    def load(self, checkpoint_dir):
-        import re
-        print(" [*] Reading checkpoints...")
-        checkpoint_dir = os.path.join(checkpoint_dir, self.model_dir, self.model_name)
-
-        ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-        if ckpt and ckpt.model_checkpoint_path:
-            ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
-            self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
-            counter = int(next(re.finditer("(\d+)(?!.*\d)", ckpt_name)).group(0))
-            print(" [*] Success to read {}".format(ckpt_name))
-            return True, counter
-        else:
-            print(" [*] Failed to find a checkpoint")
-            return False, 0
