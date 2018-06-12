@@ -61,93 +61,250 @@ class TripleGAN(object):
             print("Dataset not supported.")
             raise NotImplementedError
 
+    # def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
+    #     with tf.variable_scope(scope, reuse=reuse) :
+    #         x = dropout_original(x, rate=0.2, is_training=is_training)
+    #         y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
+    #         x = conv_concat(x,y)
+
+    #         x = lrelu(conv_layer_original(x, filter_size=32, kernel=[3,3], layer_name=scope+'_conv1'))
+    #         x = conv_concat(x,y)
+    #         x = lrelu(conv_layer_original(x, filter_size=32, kernel=[3,3], stride=2, layer_name=scope+'_conv2'))
+    #         x = dropoutconv_layer_original(x, rate=0.2, is_training=is_training)
+    #         x = conv_concat(x,y)
+
+    #         x = lrelu(conv_layer_original(x, filter_size=64, kernel=[3,3], layer_name=scope+'_conv3'))
+    #         x = conv_concat(x,y)
+    #         x = lrelu(conv_layer_original(x, filter_size=64, kernel=[3,3], stride=2, layer_name=scope+'_conv4'))
+    #         x = dropout_original(x, rate=0.2, is_training=is_training)
+    #         x = conv_concat(x,y)
+
+    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv5'))
+    #         x = conv_concat(x,y)
+    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv6'))
+    #         x = conv_concat_original(x,y)
+
+    #         x = Global_Average_Pooling(x)
+    #         x = flatten(x)
+    #         x = concat([x,y_]) # mlp_concat
+
+    #         x_logit = linear(x, unit=1, layer_name=scope+'_linear1')
+    #         out = sigmoid(x_logit)
+
+
+    #         return out, x_logit, x
+
+
     def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse) :
-            x = dropout_original(x, rate=0.2, is_training=is_training)
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
-            x = conv_concat(x,y)
 
-            x = lrelu(conv_layer_original(x, filter_size=32, kernel=[3,3], layer_name=scope+'_conv1'))
             x = conv_concat(x,y)
-            x = lrelu(conv_layer_original(x, filter_size=32, kernel=[3,3], stride=2, layer_name=scope+'_conv2'))
-            x = dropoutconv_layer_original(x, rate=0.2, is_training=is_training)
-            x = conv_concat(x,y)
+            x = conv_layer(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
+            x = max_pool_layer(name_scope="max_pool_1", input_tensor=x, pool_size=[1, 3])
 
-            x = lrelu(conv_layer_original(x, filter_size=64, kernel=[3,3], layer_name=scope+'_conv3'))
             x = conv_concat(x,y)
-            x = lrelu(conv_layer_original(x, filter_size=64, kernel=[3,3], stride=2, layer_name=scope+'_conv4'))
-            x = dropout_original(x, rate=0.2, is_training=is_training)
-            x = conv_concat(x,y)
+            x = conv_layer(name_scope="convolutional_2", input_tensor=x, num_kernels=30, kernel_shape=[1, 5])
+            x = max_pool_layer(name_scope="max_pool_2", input_tensor=x, pool_size=[1, 4])
 
-            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv5'))
             x = conv_concat(x,y)
-            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv6'))
-            x = conv_concat_original(x,y)
+            x = conv_layer(name_scope="convolutional_3", input_tensor=x, num_kernels=40, kernel_shape=[1, 3])
+            x = max_pool_layer(name_scope="max_pool_3", input_tensor=x, pool_size=[1, 4])
 
-            x = Global_Average_Pooling(x)
             x = flatten(x)
-            x = concat([x,y_]) # mlp_concat
 
-            x_logit = linear(x, unit=1, layer_name=scope+'_linear1')
-            out = sigmoid(x_logit)
+            x = concat([x,y_])
+            x = tf.layers.dense(inputs=x, units=90)
+            x = tf.layers.dense(inputs=x, units=45)
+            logits = tf.layers.dense(inputs=x, units=2)
+            logits_sigmoid = tf.nn.softmax(logits)
 
+            return x , logits, logits_sigmoid
 
-            return out, x_logit, x
+    # def generator(self, z, y, scope='generator', is_training=True, reuse=False):
+    #     with tf.variable_scope(scope, reuse=reuse) :
 
-    def generator(self, z, y, scope='generator', is_training=True, reuse=False):
-        with tf.variable_scope(scope, reuse=reuse) :
+    #         x = concat([z, y]) # mlp_concat
 
-            x = concat([z, y]) # mlp_concat
+    #         x = relu(linear(x, unit=512*4*4, layer_name=scope+'_linear1'))
+    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch1')
 
-            x = relu(linear(x, unit=512*4*4, layer_name=scope+'_linear1'))
-            x = batch_norm(x, is_training=is_training, scope=scope+'_batch1')
+    #         x = tf.reshape(x, shape=[-1, 4, 4, 512])
+    #         y = tf.reshape(y, [-1, 1, 1, self.y_dim])
+    #         x = conv_concat(x,y)
 
-            x = tf.reshape(x, shape=[-1, 4, 4, 512])
-            y = tf.reshape(y, [-1, 1, 1, self.y_dim])
-            x = conv_concat(x,y)
+    #         x = relu(deconv_layer(x, filter_size=256, kernel=[5,5], stride=2, layer_name=scope+'_deconv1'))
+    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch2')
+    #         x = conv_concat(x,y)
 
-            x = relu(deconv_layer(x, filter_size=256, kernel=[5,5], stride=2, layer_name=scope+'_deconv1'))
-            x = batch_norm(x, is_training=is_training, scope=scope+'_batch2')
-            x = conv_concat(x,y)
+    #         x = relu(deconv_layer(x, filter_size=128, kernel=[5,5], stride=2, layer_name=scope+'_deconv2'))
+    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch3')
+    #         x = conv_concat(x,y)
 
-            x = relu(deconv_layer(x, filter_size=128, kernel=[5,5], stride=2, layer_name=scope+'_deconv2'))
-            x = batch_norm(x, is_training=is_training, scope=scope+'_batch3')
-            x = conv_concat(x,y)
+    #         x = tanh(deconv_layer(x, filter_size=3, kernel=[5,5], stride=2, wn=False, layer_name=scope+'deconv3'))
 
-            x = tanh(deconv_layer(x, filter_size=3, kernel=[5,5], stride=2, wn=False, layer_name=scope+'deconv3'))
+    #         return x
+    def generator(self, noise_vector, y_, scope="generator", is_training=True, reuse=False):
 
-            return x
+        with tf.variable_scope(scope, reuse=reuse):
+            # y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
+            # noise_vector = conv_concat(noise_vector,y)
+            batch_size = self.batch_size
+            g_dim = 64  # Number of filters of first layer of generator
+            c_dim = 1  # dimensionality of the output
+            s = 500  # Final length of the sequence
+
+            # We want to slowly upscale the sequence, so these values should help
+            # to make that change gradual
+            s2, s4, s8, s16 = int(s / 2), int(s / 4), int(s / 8), int(s / 16)
+
+            width = 4  # because we have 4 letters: ATCG
+
+            # this is a magic number which I'm not sure what means yet
+            magic_number = 5
+
+            output_mlp=mlp('mlp',noise_vector,batch_norm=False,relu=False)
+
+            h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
+            h0 = tf.nn.relu(h0)
+            # Dimensions of h0 = batch_size x 1 x 31 x magic_number
+
+            # First DeConv Layer
+            output1_shape = [batch_size, int(width / 2), s8 + 1, g_dim * 4]
+            W_conv1 = tf.get_variable('g_wconv1', [5, 5, output1_shape[-1], int(h0.get_shape()[-1])],
+                                      initializer=tf.truncated_normal_initializer(stddev=0.1))
+
+            b_conv1 = tf.get_variable('g_bconv1', [output1_shape[-1]], initializer=tf.constant_initializer(.1))
+
+            H_conv1 = tf.nn.conv2d_transpose(value=h0, filter=W_conv1, output_shape=output1_shape,
+                                             strides=[1, 2, 2, 1], padding='SAME', name="H_conv1") + b_conv1
+            H_conv1 = tf.contrib.layers.batch_norm(inputs=H_conv1, center=True, scale=True, is_training=True,
+                                                   scope="g_bn1")
+            H_conv1 = tf.nn.relu(H_conv1)
+            # Dimensions of H_conv1 = batch_size x 1 x 62 x 256
+
+            # Second DeConv Layer
+            output2_shape = [batch_size, int(width / 2), s4, g_dim * 2]
+            W_conv2 = tf.get_variable('g_wconv2', [5, 5, output2_shape[-1], int(H_conv1.get_shape()[-1])],
+                                      initializer=tf.truncated_normal_initializer(stddev=0.1))
+            b_conv2 = tf.get_variable('g_bconv2', [output2_shape[-1]], initializer=tf.constant_initializer(.1))
+            H_conv2 = tf.nn.conv2d_transpose(H_conv1, W_conv2, output_shape=output2_shape,
+                                             strides=[1, 1, 2, 1], padding='SAME') + b_conv2
+            H_conv2 = tf.contrib.layers.batch_norm(inputs=H_conv2, center=True, scale=True, is_training=True,
+                                                   scope="g_bn2")
+            H_conv2 = tf.nn.relu(H_conv2)
+            # Dimensions of H_conv2 = batch_size x 2 x 124 x 128
+
+            # Third DeConv Layer
+            output3_shape = [batch_size, int(width), s2, g_dim * 1]
+            W_conv3 = tf.get_variable('g_wconv3', [5, 5, output3_shape[-1], int(H_conv2.get_shape()[-1])],
+                                      initializer=tf.truncated_normal_initializer(stddev=0.1))
+            b_conv3 = tf.get_variable('g_bconv3', [output3_shape[-1]], initializer=tf.constant_initializer(.1))
+            H_conv3 = tf.nn.conv2d_transpose(H_conv2, W_conv3, output_shape=output3_shape,
+                                             strides=[1, 2, 2, 1], padding='SAME') + b_conv3
+            H_conv3 = tf.contrib.layers.batch_norm(inputs=H_conv3, center=True, scale=True, is_training=True,
+                                                   scope="g_bn3")
+            H_conv3 = tf.nn.relu(H_conv3)
+            # Dimensions of H_conv3 = batch_size x 4 x 248 x 64
+
+            # Fourth DeConv Layer
+            output4_shape = [batch_size, int(width), s, c_dim]
+            W_conv4 = tf.get_variable('g_wconv4', [1, 2, output4_shape[-1], int(H_conv3.get_shape()[-1])],
+                                      initializer=tf.truncated_normal_initializer(stddev=0.1))
+            b_conv4 = tf.get_variable('g_bconv4', [output4_shape[-1]], initializer=tf.constant_initializer(.1))
+            H_conv4 = tf.nn.conv2d_transpose(H_conv3, W_conv4, output_shape=output4_shape,
+                                             strides=[1, 1, 2, 1], padding='VALID') + b_conv4
+            #         H_conv4 = tf.nn.tanh(H_conv4)
+
+            H_conv4 = tf.nn.softmax(H_conv4, axis=1, name="softmax_H_conv4")
+            gene = tf.where(tf.equal(tf.reduce_max(H_conv4, axis=1, keep_dims=True), H_conv4),
+                            tf.divide(H_conv4, tf.reduce_max(H_conv4, axis=1, keep_dims=True)),
+                            tf.multiply(H_conv4, 0.))
+            # Dimensions of H_conv4 = batch_size x 4 x 500 x 1
+        return H_conv4, gene
 
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse) :
-            x = gaussian_noise_layer(x) # default = 0.15
-            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv1'))
-            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv2'))
-            x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv3'))
+            if (reuse):
+                tf.get_variable_scope().reuse_variables()
+                
+            # TODO: make a reverse filter conv layer like in the Enhancer paper 
 
-            x = max_pooling_original(x, kernel=[2,2], stride=2)
-            x = dropout_original(x, rate=0.5, is_training=is_training)
+            # convolutional + pooling #1
+            l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, 
+                            kernel_shape=[4, 9], relu=True)
+            l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3])
 
-            x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv4'))
-            x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv5'))
-            x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv6'))
+            # convolutional + pooling #2
+            l3 = conv_max_forward_reverse(name_scope="conv2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5])
+            l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[1, 4])
 
-            x = max_pooling_original(x, kernel=[2,2], stride=2)
-            x = dropout_original(x, rate=0.5, is_training=is_training)
+            # convolutional + pooling #3
+            l5 = conv_max_forward_reverse(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 3])
+            l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4])
 
-            x = lrelu(conv_layer_original(x, filter_size=512, kernel=[3,3], layer_name=scope+'_conv7'))
-            x = nin(x, unit=256, layer_name=scope+'_nin1')
-            x = nin(x, unit=128, layer_name=scope+'_nin2')
+            flat = flatten(l6)
+            # fully connected layers
+            l7 = tf.layers.dense(inputs=flat, units=90)
+            l8 = tf.layers.dense(inputs=l7, units=45)
 
-            x = Global_Average_Pooling(x)
-            x = flatten(x)
-            x = linear(x, unit=10, layer_name=scope+'_linear1')
-            return x
+            logits = tf.layers.dense(inputs=l8, units=2)
+            
+        return tf.nn.softmax(logits, axis=1, name="softmax_tensor")
+    # def generator(self, z, y, scope='generator', is_training=True, reuse=False):
+    #     with tf.variable_scope(scope, reuse=reuse) :
+
+    #         x = concat([z, y]) # mlp_concat
+
+    #         x = relu(linear(x, unit=512*4*4, layer_name=scope+'_linear1'))
+    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch1')
+
+    #         x = tf.reshape(x, shape=[-1, 4, 4, 512])
+    #         y = tf.reshape(y, [-1, 1, 1, self.y_dim])
+    #         x = conv_concat(x,y)
+
+    #         x = relu(deconv_layer(x, filter_size=256, kernel=[5,5], stride=2, layer_name=scope+'_deconv1'))
+    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch2')
+    #         x = conv_concat(x,y)
+
+    #         x = relu(deconv_layer(x, filter_size=128, kernel=[5,5], stride=2, layer_name=scope+'_deconv2'))
+    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch3')
+    #         x = conv_concat(x,y)
+
+    #         x = tanh(deconv_layer(x, filter_size=3, kernel=[5,5], stride=2, wn=False, layer_name=scope+'deconv3'))
+
+    #         return x
+
+
+    # def classifier(self, x, scope='classifier', is_training=True, reuse=False):
+    #     with tf.variable_scope(scope, reuse=reuse) :
+    #         x = gaussian_noise_layer(x) # default = 0.15
+    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv1'))
+    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv2'))
+    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv3'))
+
+    #         x = max_pooling_original(x, kernel=[2,2], stride=2)
+    #         x = dropout_original(x, rate=0.5, is_training=is_training)
+
+    #         x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv4'))
+    #         x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv5'))
+    #         x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv6'))
+
+    #         x = max_pooling_original(x, kernel=[2,2], stride=2)
+    #         x = dropout_original(x, rate=0.5, is_training=is_training)
+
+    #         x = lrelu(conv_layer_original(x, filter_size=512, kernel=[3,3], layer_name=scope+'_conv7'))
+    #         x = nin(x, unit=256, layer_name=scope+'_nin1')
+    #         x = nin(x, unit=128, layer_name=scope+'_nin2')
+
+    #         x = Global_Average_Pooling(x)
+    #         x = flatten(x)
+    #         x = linear(x, unit=10, layer_name=scope+'_linear1')
+    #         return x
 
     def build_model(self):
-        image_dims = [self.input_height, self.input_width, self.c_dim]
+        input_dims = [self.input_height, self.input_width, self.c_dim]
         bs = self.batch_size
-        unlabel_bs = self.unlabelled_batch_size
         test_bs = self.test_batch_size
         alpha = self.alpha
         alpha_cla_adv = self.alpha_cla_adv
@@ -159,13 +316,11 @@ class TripleGAN(object):
 
         """ Graph Input """
         # images
-        self.inputs = tf.placeholder(tf.float32, [bs] + image_dims, name='real_images')
-        self.unlabelled_inputs = tf.placeholder(tf.float32, [unlabel_bs] + image_dims, name='unlabelled_images')
-        self.test_inputs = tf.placeholder(tf.float32, [test_bs] + image_dims, name='test_images')
+        self.inputs = tf.placeholder(tf.float32, [bs] + input_dims, name='real_sequences')
+        self.test_inputs = tf.placeholder(tf.float32, [test_bs] + input_dims, name='test_sequences')
 
         # labels
         self.y = tf.placeholder(tf.float32, [bs, self.y_dim], name='y')
-        self.unlabelled_inputs_y = tf.placeholder(tf.float32, [unlabel_bs, self.y_dim])
         self.test_label = tf.placeholder(tf.float32, [test_bs, self.y_dim], name='test_label')
         self.visual_y = tf.placeholder(tf.float32, [self.visual_num, self.y_dim], name='visual_y')
 
@@ -180,31 +335,28 @@ class TripleGAN(object):
         D_real, D_real_logits, _ = self.discriminator(self.inputs, self.y, is_training=True, reuse=False)
 
         # output of D for fake images
-        G = self.generator(self.z, self.y, is_training=True, reuse=False)
-        D_fake, D_fake_logits, _ = self.discriminator(G, self.y, is_training=True, reuse=True)
+        G_approx_gene, G_gene = self.generator(self.z, self.y, is_training=True, reuse=False)
+        D_fake, D_fake_logits, _ = self.discriminator(G_gene, self.y, is_training=True, reuse=True)
 
         # output of C for real images
         C_real_logits = self.classifier(self.inputs, is_training=True, reuse=False)
         R_L = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=C_real_logits))
 
-        # output of D for unlabelled images
-        Y_c = self.classifier(self.unlabelled_inputs, is_training=True, reuse=True)
-        D_cla, D_cla_logits, _ = self.discriminator(self.unlabelled_inputs, Y_c, is_training=True, reuse=True)
+
 
         # output of C for fake images
-        C_fake_logits = self.classifier(G, is_training=True, reuse=True)
+        C_fake_logits = self.classifier(G_gene, is_training=True, reuse=True)
         R_P = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=C_fake_logits))
 
         #
 
         # get loss for discriminator
-        d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_real_logits, labels=tf.ones_like(D_real)))
-        d_loss_fake = (1-alpha)*tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.zeros_like(D_fake)))
-        d_loss_cla = alpha*tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_cla_logits, labels=tf.zeros_like(D_cla)))
-        self.d_loss = d_loss_real + d_loss_fake + d_loss_cla
+        d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_real_logits, labels=tf.ones_like(D_real_logits)))
+        d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.zeros_like(D_fake_logits)))
+        self.d_loss = d_loss_real + d_loss_fake 
 
         # get loss for generator
-        self.g_loss = (1-alpha)*tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake)))
+        self.g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake_logits)))
 
         # test loss for classify
         test_Y = self.classifier(self.test_inputs, is_training=False, reuse=True)
@@ -212,12 +364,12 @@ class TripleGAN(object):
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         # get loss for classify
-        max_c = tf.cast(tf.argmax(Y_c, axis=1), tf.float32)
-        c_loss_dis = tf.reduce_mean(max_c * tf.nn.softmax_cross_entropy_with_logits(logits=D_cla_logits, labels=tf.ones_like(D_cla)))
+        # max_c = tf.cast(tf.argmax(Y_c, axis=1), tf.float32)
+        # c_loss_dis = tf.reduce_mean(max_c * tf.nn.softmax_cross_entropy_with_logits(logits=D_cla_logits, labels=tf.ones_like(D_cla)))
         # self.c_loss = alpha * c_loss_dis + R_L + self.alpha_p*R_P
 
         # R_UL = self.unsup_weight * tf.reduce_mean(tf.squared_difference(Y_c, self.unlabelled_inputs_y))
-        self.c_loss = alpha_cla_adv * alpha * c_loss_dis + R_L + self.alpha_p*R_P
+        self.c_loss =  R_L + self.alpha_p*R_P
 
         """ Training """
 
@@ -236,12 +388,14 @@ class TripleGAN(object):
 
         """" Testing """
         # for test
-        self.fake_images = self.generator(self.visual_z, self.visual_y, is_training=False, reuse=True)
+        self.fake_sequences = self.generator(self.visual_z, self.visual_y, is_training=False, reuse=True)
 
         """ Summary """
         d_loss_real_sum = tf.summary.scalar("d_loss_real", d_loss_real)
         d_loss_fake_sum = tf.summary.scalar("d_loss_fake", d_loss_fake)
-        d_loss_cla_sum = tf.summary.scalar("d_loss_cla", d_loss_cla)
+        ## d_loss_cla is for unlabelled data, what is this operation
+        # d_loss_cla_sum = tf.summary.scalar("d_loss_cla", d_loss_cla)
+        d_loss_cla_sum = tf.summary.scalar("d_loss_cla", 0)
 
         d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
         g_loss_sum = tf.summary.scalar("g_loss", self.g_loss)
@@ -256,8 +410,8 @@ class TripleGAN(object):
 
         # initialize all variables
         tf.global_variables_initializer().run()
-        gan_lr = self.learning_rate
-        cla_lr = self.cla_learning_rate
+        gan_lr = self.lr_g
+        cla_lr = self.lr_c
 
         # graph inputs for visualize training results
         self.sample_z = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
@@ -287,7 +441,7 @@ class TripleGAN(object):
             start_epoch = 0
             start_batch_id = 0
             counter = 1
-            print(" [!] Load failed...")
+            print(" [!] Load failed...starting from epoch 0...")
 
         # loop for epoch
         start_time = time.time()
@@ -298,34 +452,28 @@ class TripleGAN(object):
                 gan_lr *= 0.995
                 cla_lr *= 0.99
                 print("**** learning rate DECAY ****")
-                print(gan_lr)
-                print(cla_lr)
+                print("GAN lr is now:" + str(gan_lr))
+                print("CLA lr is now" + str(cla_lr))
 
             if epoch >= self.apply_epoch :
                 alpha_p = self.apply_alpha_p
             else :
                 alpha_p = self.init_alpha_p
 
-            rampup_value = rampup(epoch - 1)
-            unsup_weight = rampup_value * 100.0 if epoch > 1 else 0
+            # rampup_value = rampup(epoch - 1)
+            # unsup_weight = rampup_value * 100.0 if epoch > 1 else 0
 
             # get batch data
             for idx in range(start_batch_id, self.num_batches):
                 batch_images = self.data_X[idx * self.batch_size : (idx + 1) * self.batch_size]
                 batch_codes = self.data_y[idx * self.batch_size : (idx + 1) * self.batch_size]
 
-                batch_unlabelled_images = self.unlabelled_X[idx * self.unlabelled_batch_size : (idx + 1) * self.unlabelled_batch_size]
-                batch_unlabelled_images_y = self.unlabelled_y[idx * self.unlabelled_batch_size : (idx + 1) * self.unlabelled_batch_size]
-
                 batch_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
 
                 feed_dict = {
                     self.inputs: batch_images, self.y: batch_codes,
-                    self.unlabelled_inputs: batch_unlabelled_images,
-                    self.unlabelled_inputs_y: batch_unlabelled_images_y,
                     self.z: batch_z, self.alpha_p: alpha_p,
-                    self.gan_lr: gan_lr, self.cla_lr: cla_lr,
-                    self.unsup_weight : unsup_weight
+                    self.gan_lr: gan_lr, self.cla_lr: cla_lr
                 }
                 # update D network
                 _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
@@ -401,16 +549,21 @@ class TripleGAN(object):
         z_sample = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
 
         """ random noise, random discrete code, fixed continuous code """
-        y = np.random.choice(self.len_discrete_code, self.visual_num)
+        #y = np.random.choice(self.len_discrete_code, self.visual_num)
         # Generated 10 labels with batch_size
         y_one_hot = np.zeros((self.visual_num, self.y_dim))
-        y_one_hot[np.arange(self.visual_num), y] = 1
+        #y_one_hot[np.arange(self.visual_num), y] = 1
 
-        samples = self.sess.run(self.fake_images, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
+        samples = self.sess.run(self.fake_sequences, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
 
-        save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
-                    check_folder(
-                        self.result_dir + '/' + self.model_dir + '/all_classes') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes.png')
+        print("Generated samples:")
+        print(samples)
+
+        return
+
+        # save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
+        #             check_folder(
+        #                 self.result_dir + '/' + self.model_dir + '/all_classes') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes.png')
 
         """ specified condition, random noise """
         n_styles = 10  # must be less than or equal to self.batch_size
