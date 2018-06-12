@@ -66,7 +66,7 @@ class GAN(TripleGAN):
             # this is a magic number which I'm not sure what means yet
             magic_number = 5
 
-            output_mlp=mlp('mlp',noise_vector,batch_norm=False,relu=False)
+            output_mlp = mlp('mlp', noise_vector, batch_norm=False, relu=False, is_training=is_training)
 
             h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
             h0 = tf.nn.relu(h0)
