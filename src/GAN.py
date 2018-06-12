@@ -18,7 +18,7 @@ class GAN(TripleGAN):
         self.lr_g = lr_g
 
 
-        print("Initializing GAN with lr_d=%f, lr_g=%f" % (self.lr_d, self.lr_g))
+        print("Initializing GAN with lr_d=%.3g, lr_g=%.3g" % (self.lr_d, self.lr_g))
 
     def discriminator(self, dna_sequence, y_=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
@@ -129,8 +129,7 @@ class GAN(TripleGAN):
     def build_model(self):
         input_dims = [self.input_height, self.input_width, self.c_dim]
 
-        alpha = self.alpha
-        alpha_cla_adv = self.alpha_cla_adv  # ????
+
         self.alpha_p = tf.placeholder(tf.float32, name='alpha_p')
         self.tf_lr_d = tf.placeholder(tf.float32, name='lr_d')
         self.tf_lr_g = tf.placeholder(tf.float32, name='lr_g')
@@ -242,8 +241,8 @@ class GAN(TripleGAN):
                 line = line[-1]
                 lr_d = float(line.split()[0])
                 lr_g = float(line.split()[1])
-                print("lr_d : ", lr_d)
-                print("lr_g : ", lr_g)
+                print("lr_d: %.3g" % lr_d)
+                print("lr_g: %.3g" % lr_g)
             print(" [*] Load SUCCESS")
         else:
             start_epoch = 0
@@ -260,8 +259,8 @@ class GAN(TripleGAN):
                 lr_d *= 0.995
                 lr_g *= 0.99
                 print("**** learning rate DECAY ****")
-                print("lr_d lr is now:" + str(lr_d))
-                print("lr_g lr is now" + str(lr_g))
+                print("lr_d lr is now: %.3g" % lr_d)
+                print("lr_g lr is now: %.3g" % lr_g)
 
             if epoch >= self.apply_epoch:
                 alpha_p = self.apply_alpha_p
