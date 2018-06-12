@@ -435,9 +435,9 @@ class TripleGAN(object):
                 lr_d = float(line.split()[0])
                 lr_g = float(line.split()[1])
                 lr_c = float(line.split()[2])
-                print("lr_d : ", lr_d)
-                print("lr_g : ", lr_g)
-                print("lr_c : ", lr_c)
+                print("lr_d: %.3g" % lr_d)
+                print("lr_g: %.3g" % lr_g)
+                print("lr_c: %.3g" % lr_c)
             print(" [*] Load SUCCESS")
         else:
             start_epoch = 0
@@ -450,14 +450,14 @@ class TripleGAN(object):
 
         for epoch in range(start_epoch, self.epoch):
 
-            if epoch >= self.decay_epoch :
+            if epoch >= self.decay_epoch:
                 lr_d *= 0.995
                 lr_g *= 0.995
                 lr_c *= 0.99
                 print("**** learning rate DECAY ****")
-                print("lr_d is now:" + str(lr_d))
-                print("lr_g is now:" + str(lr_g))
-                print("lr_c is now" + str(lr_c))
+                print("lr_d is now: %.3g" % lr_d)
+                print("lr_g is now: %.3g" % lr_g)
+                print("lr_c is now: %.3g" % lr_c)
 
             if epoch >= self.apply_epoch :
                 alpha_p = self.apply_alpha_p
