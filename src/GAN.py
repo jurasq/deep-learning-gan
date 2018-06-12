@@ -17,8 +17,7 @@ class GAN(TripleGAN):
         self.lr_d = lr_d
         self.lr_g = lr_g
 
-
-        print("Initializing GAN with d_lr=%f, g_lr=%f" % (self.lr_d, self.lr_g))
+        print("Initializing GAN with lr_d=%.3g, lr_g=%.3g" % (self.lr_d, self.lr_g))
 
     def discriminator(self, dna_sequence, y_=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
@@ -129,11 +128,10 @@ class GAN(TripleGAN):
     def build_model(self):
         input_dims = [self.input_height, self.input_width, self.c_dim]
 
-        alpha = self.alpha
-        alpha_cla_adv = self.alpha_cla_adv  # ????
+
         self.alpha_p = tf.placeholder(tf.float32, name='alpha_p')
-        self.gan_lr = tf.placeholder(tf.float32, name='gan_lr')
-        self.cla_lr = tf.placeholder(tf.float32, name='cla_lr')
+        self.tf_lr_d = tf.placeholder(tf.float32, name='lr_d')
+        self.tf_lr_g = tf.placeholder(tf.float32, name='lr_g')
 
         self.c_beta1 = tf.placeholder(tf.float32, name='c_beta1')
 
@@ -192,9 +190,9 @@ class GAN(TripleGAN):
         # for var in t_vars: print(var.name)
         # optimizers
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            self.d_optim = tf.train.AdamOptimizer(self.lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
+            self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
                                                                                             var_list=d_vars)
-            self.g_optim = tf.train.AdamOptimizer(self.lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
+            self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
                                                                                             var_list=g_vars)
 
         """" Testing """
@@ -217,8 +215,9 @@ class GAN(TripleGAN):
 
         # initialize all variables
         tf.global_variables_initializer().run()
-        gan_lr = self.lr_g
-        cla_lr = self.lr_c
+
+        lr_d = self.lr_d
+        lr_g = self.lr_g
 
         # graph inputs for visualize training results
         self.sample_z = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
@@ -233,16 +232,16 @@ class GAN(TripleGAN):
         # restore check-point if it exits
         could_load, checkpoint_counter = self.load(self.checkpoint_dir)
         if could_load:
-            start_epoch = (int)(checkpoint_counter / self.num_batches)
+            start_epoch = int(checkpoint_counter / self.num_batches)
             start_batch_id = checkpoint_counter - start_epoch * self.num_batches
             counter = checkpoint_counter
             with open('lr_logs.txt', 'r') as f:
                 line = f.readlines()
                 line = line[-1]
-                gan_lr = float(line.split()[0])
-                cla_lr = float(line.split()[1])
-                print("gan_lr : ", gan_lr)
-                print("cla_lr : ", cla_lr)
+                lr_d = float(line.split()[0])
+                lr_g = float(line.split()[1])
+                print("lr_d: %.3g" % lr_d)
+                print("lr_g: %.3g" % lr_g)
             print(" [*] Load SUCCESS")
         else:
             start_epoch = 0
@@ -256,11 +255,11 @@ class GAN(TripleGAN):
         for epoch in range(start_epoch, self.epoch):
 
             if epoch >= self.decay_epoch:
-                gan_lr *= 0.995
-                cla_lr *= 0.99
+                lr_d *= 0.995
+                lr_g *= 0.99
                 print("**** learning rate DECAY ****")
-                print("GAN lr is now:" + str(gan_lr))
-                print("CLA lr is now" + str(cla_lr))
+                print("lr_d lr is now: %.3g" % lr_d)
+                print("lr_g lr is now: %.3g" % lr_g)
 
             if epoch >= self.apply_epoch:
                 alpha_p = self.apply_alpha_p
@@ -276,7 +275,7 @@ class GAN(TripleGAN):
                 feed_dict = {
                     self.inputs: batch_images, self.y: batch_codes,
                     self.z: batch_z, self.alpha_p: alpha_p,
-                    self.gan_lr: gan_lr, self.cla_lr: cla_lr,
+                    self.tf_lr_d: lr_d, self.tf_lr_g: lr_g,
                 }
                 # update D network
                 _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
@@ -323,7 +322,7 @@ class GAN(TripleGAN):
 
             # line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
             # print(line)
-            lr = "{} {}".format(gan_lr, cla_lr)
+            lr = "{} {}".format(lr_d, lr_g)
             # with open('logs.txt', 'a') as f:
             #     f.write(line)
             with open('lr_logs.txt', 'a') as f:

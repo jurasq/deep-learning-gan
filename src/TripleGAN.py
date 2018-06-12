@@ -59,40 +59,6 @@ class TripleGAN(object):
             print("Dataset not supported.")
             raise NotImplementedError
 
-    # def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
-    #     with tf.variable_scope(scope, reuse=reuse) :
-    #         x = dropout_original(x, rate=0.2, is_training=is_training)
-    #         y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
-    #         x = conv_concat(x,y)
-
-    #         x = lrelu(conv_layer_original(x, filter_size=32, kernel=[3,3], layer_name=scope+'_conv1'))
-    #         x = conv_concat(x,y)
-    #         x = lrelu(conv_layer_original(x, filter_size=32, kernel=[3,3], stride=2, layer_name=scope+'_conv2'))
-    #         x = dropoutconv_layer_original(x, rate=0.2, is_training=is_training)
-    #         x = conv_concat(x,y)
-
-    #         x = lrelu(conv_layer_original(x, filter_size=64, kernel=[3,3], layer_name=scope+'_conv3'))
-    #         x = conv_concat(x,y)
-    #         x = lrelu(conv_layer_original(x, filter_size=64, kernel=[3,3], stride=2, layer_name=scope+'_conv4'))
-    #         x = dropout_original(x, rate=0.2, is_training=is_training)
-    #         x = conv_concat(x,y)
-
-    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv5'))
-    #         x = conv_concat(x,y)
-    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv6'))
-    #         x = conv_concat_original(x,y)
-
-    #         x = Global_Average_Pooling(x)
-    #         x = flatten(x)
-    #         x = concat([x,y_]) # mlp_concat
-
-    #         x_logit = linear(x, unit=1, layer_name=scope+'_linear1')
-    #         out = sigmoid(x_logit)
-
-
-    #         return out, x_logit, x
-
-
     def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse) :
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
@@ -119,29 +85,6 @@ class TripleGAN(object):
 
             return x , logits, logits_sigmoid
 
-    # def generator(self, z, y, scope='generator', is_training=True, reuse=False):
-    #     with tf.variable_scope(scope, reuse=reuse) :
-
-    #         x = concat([z, y]) # mlp_concat
-
-    #         x = relu(linear(x, unit=512*4*4, layer_name=scope+'_linear1'))
-    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch1')
-
-    #         x = tf.reshape(x, shape=[-1, 4, 4, 512])
-    #         y = tf.reshape(y, [-1, 1, 1, self.y_dim])
-    #         x = conv_concat(x,y)
-
-    #         x = relu(deconv_layer(x, filter_size=256, kernel=[5,5], stride=2, layer_name=scope+'_deconv1'))
-    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch2')
-    #         x = conv_concat(x,y)
-
-    #         x = relu(deconv_layer(x, filter_size=128, kernel=[5,5], stride=2, layer_name=scope+'_deconv2'))
-    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch3')
-    #         x = conv_concat(x,y)
-
-    #         x = tanh(deconv_layer(x, filter_size=3, kernel=[5,5], stride=2, wn=False, layer_name=scope+'deconv3'))
-
-    #         return x
     def generator(self, noise_vector, y_, scope="generator", is_training=True, reuse=False):
 
         with tf.variable_scope(scope, reuse=reuse):
@@ -161,7 +104,7 @@ class TripleGAN(object):
             # this is a magic number which I'm not sure what means yet
             magic_number = 5
 
-            output_mlp=mlp('mlp',noise_vector,batch_norm=False,relu=False)
+            output_mlp = mlp('mlp', noise_vector, batch_norm=False, relu=False)
 
             h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
             h0 = tf.nn.relu(h0)
@@ -249,63 +192,12 @@ class TripleGAN(object):
             logits = tf.layers.dense(inputs=l8, units=2)
             
         return tf.nn.softmax(logits, axis=1, name="softmax_tensor")
-    # def generator(self, z, y, scope='generator', is_training=True, reuse=False):
-    #     with tf.variable_scope(scope, reuse=reuse) :
-
-    #         x = concat([z, y]) # mlp_concat
-
-    #         x = relu(linear(x, unit=512*4*4, layer_name=scope+'_linear1'))
-    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch1')
-
-    #         x = tf.reshape(x, shape=[-1, 4, 4, 512])
-    #         y = tf.reshape(y, [-1, 1, 1, self.y_dim])
-    #         x = conv_concat(x,y)
-
-    #         x = relu(deconv_layer(x, filter_size=256, kernel=[5,5], stride=2, layer_name=scope+'_deconv1'))
-    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch2')
-    #         x = conv_concat(x,y)
-
-    #         x = relu(deconv_layer(x, filter_size=128, kernel=[5,5], stride=2, layer_name=scope+'_deconv2'))
-    #         x = batch_norm(x, is_training=is_training, scope=scope+'_batch3')
-    #         x = conv_concat(x,y)
-
-    #         x = tanh(deconv_layer(x, filter_size=3, kernel=[5,5], stride=2, wn=False, layer_name=scope+'deconv3'))
-
-    #         return x
-
-
-    # def classifier(self, x, scope='classifier', is_training=True, reuse=False):
-    #     with tf.variable_scope(scope, reuse=reuse) :
-    #         x = gaussian_noise_layer(x) # default = 0.15
-    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv1'))
-    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv2'))
-    #         x = lrelu(conv_layer_original(x, filter_size=128, kernel=[3,3], layer_name=scope+'_conv3'))
-
-    #         x = max_pooling_original(x, kernel=[2,2], stride=2)
-    #         x = dropout_original(x, rate=0.5, is_training=is_training)
-
-    #         x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv4'))
-    #         x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv5'))
-    #         x = lrelu(conv_layer_original(x, filter_size=256, kernel=[3,3], layer_name=scope+'_conv6'))
-
-    #         x = max_pooling_original(x, kernel=[2,2], stride=2)
-    #         x = dropout_original(x, rate=0.5, is_training=is_training)
-
-    #         x = lrelu(conv_layer_original(x, filter_size=512, kernel=[3,3], layer_name=scope+'_conv7'))
-    #         x = nin(x, unit=256, layer_name=scope+'_nin1')
-    #         x = nin(x, unit=128, layer_name=scope+'_nin2')
-
-    #         x = Global_Average_Pooling(x)
-    #         x = flatten(x)
-    #         x = linear(x, unit=10, layer_name=scope+'_linear1')
-    #         return x
 
     def build_model(self):
         input_dims = [self.input_height, self.input_width, self.c_dim]
         bs = self.batch_size
         test_bs = self.test_batch_size
-        alpha = self.alpha
-        alpha_cla_adv = self.alpha_cla_adv
+
         self.alpha_p = tf.placeholder(tf.float32, name='alpha_p')
         self.tf_lr_d = tf.placeholder(tf.float32, name='lr_d')
         self.tf_lr_g = tf.placeholder(tf.float32, name='lr_g')
@@ -391,9 +283,7 @@ class TripleGAN(object):
         """ Summary """
         d_loss_real_sum = tf.summary.scalar("d_loss_real", d_loss_real)
         d_loss_fake_sum = tf.summary.scalar("d_loss_fake", d_loss_fake)
-        ## d_loss_cla is for unlabelled data, what is this operation
-        # d_loss_cla_sum = tf.summary.scalar("d_loss_cla", d_loss_cla)
-        d_loss_cla_sum = tf.summary.scalar("d_loss_cla", 0)
+
 
         d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
         g_loss_sum = tf.summary.scalar("g_loss", self.g_loss)
@@ -402,7 +292,7 @@ class TripleGAN(object):
         # final summary operations
         self.g_sum = tf.summary.merge([d_loss_fake_sum, g_loss_sum])
         self.d_sum = tf.summary.merge([d_loss_real_sum, d_loss_sum])
-        self.c_sum = tf.summary.merge([d_loss_cla_sum, c_loss_sum])
+        self.c_sum = tf.summary.merge([c_loss_sum])
 
     def train(self):
 
@@ -435,9 +325,9 @@ class TripleGAN(object):
                 lr_d = float(line.split()[0])
                 lr_g = float(line.split()[1])
                 lr_c = float(line.split()[2])
-                print("lr_d : ", lr_d)
-                print("lr_g : ", lr_g)
-                print("lr_c : ", lr_c)
+                print("lr_d: %.3g" % lr_d)
+                print("lr_g: %.3g" % lr_g)
+                print("lr_c: %.3g" % lr_c)
             print(" [*] Load SUCCESS")
         else:
             start_epoch = 0
@@ -450,14 +340,14 @@ class TripleGAN(object):
 
         for epoch in range(start_epoch, self.epoch):
 
-            if epoch >= self.decay_epoch :
+            if epoch >= self.decay_epoch:
                 lr_d *= 0.995
                 lr_g *= 0.995
                 lr_c *= 0.99
                 print("**** learning rate DECAY ****")
-                print("lr_d is now:" + str(lr_d))
-                print("lr_g is now:" + str(lr_g))
-                print("lr_c is now" + str(lr_c))
+                print("lr_d is now: %.3g" % lr_d)
+                print("lr_g is now: %.3g" % lr_g)
+                print("lr_c is now: %.3g" % lr_c)
 
             if epoch >= self.apply_epoch :
                 alpha_p = self.apply_alpha_p
