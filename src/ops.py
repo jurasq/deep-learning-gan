@@ -19,11 +19,11 @@ def weight_norm(x, output_dim) :
     return tf.variables_initializer(w_init)
 
 def mlp(name_scope,input_tensor,name_suffix=None,batch_norm=False,relu=False,is_training=True):
-    # """
-    # Return a 3 hidden layer perceptron, possibly with a ReLU at the end.
-    # :param name_scope:   where the variables live
-    # :param input_tensor: of shape [batch, in_height, in_width, in_channels], e.g. [15 500 4 1]
-    # """
+    """
+    Return a 3 hidden layer perceptron, possibly with a ReLU at the end.
+    :param name_scope:   where the variables live
+    :param input_tensor: of shape [batch, in_height, in_width, in_channels], e.g. [15 500 4 1]
+    """
 
     name_suffix = name_suffix if name_suffix else ""
 
@@ -33,7 +33,6 @@ def mlp(name_scope,input_tensor,name_suffix=None,batch_norm=False,relu=False,is_
 
     #input_channels = input_shape[-1]
 
-    #not really sure why I'm using the name_scope, I think it's mostly for presentation purposes
     with tf.name_scope(name_scope):
 
         weights_shape = [input_shape[0],input_shape[0]]

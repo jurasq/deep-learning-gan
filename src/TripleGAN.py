@@ -32,8 +32,6 @@ class TripleGAN(object):
             self.lr_g = lr_g
             self.lr_c = lr_c
 
-            # self.learning_rate = gan_lr  # 3e-4, 1e-3
-            # self.cla_learning_rate = cla_lr  # 3e-3, 1e-2 ?
             self.GAN_beta1 = 0.5  # D and G, exponential decay rate for the 1st moment estimates
             self.beta1 = 0.9  # C, exponential decay rate for the 1st moment estimates
             self.beta2 = 0.999  # C, exponential decay rate for the 2nd moment estimates
@@ -309,9 +307,10 @@ class TripleGAN(object):
         alpha = self.alpha
         alpha_cla_adv = self.alpha_cla_adv
         self.alpha_p = tf.placeholder(tf.float32, name='alpha_p')
-        self.gan_lr = tf.placeholder(tf.float32, name='gan_lr')
-        self.cla_lr = tf.placeholder(tf.float32, name='cla_lr')
-        self.unsup_weight = tf.placeholder(tf.float32, name='unsup_weight')
+        self.tf_lr_d = tf.placeholder(tf.float32, name='lr_d')
+        self.tf_lr_g = tf.placeholder(tf.float32, name='lr_g')
+        self.tf_lr_c = tf.placeholder(tf.float32, name='lr_c')
+
         self.c_beta1 = tf.placeholder(tf.float32, name='c_beta1')
 
         """ Graph Input """
@@ -379,12 +378,11 @@ class TripleGAN(object):
         g_vars = [var for var in t_vars if 'generator' in var.name]
         c_vars = [var for var in t_vars if 'classifier' in var.name]
 
-        for var in t_vars: print(var.name)
         # optimizers
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            self.d_optim = tf.train.AdamOptimizer(self.gan_lr, beta1=self.GAN_beta1).minimize(self.d_loss, var_list=d_vars)
-            self.g_optim = tf.train.AdamOptimizer(self.gan_lr, beta1=self.GAN_beta1).minimize(self.g_loss, var_list=g_vars)
-            self.c_optim = tf.train.AdamOptimizer(self.cla_lr, beta1=self.beta1, beta2=self.beta2, epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
+            self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss, var_list=d_vars)
+            self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss, var_list=g_vars)
+            self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.beta1, beta2=self.beta2, epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
 
         """" Testing """
         # for test
@@ -410,8 +408,10 @@ class TripleGAN(object):
 
         # initialize all variables
         tf.global_variables_initializer().run()
-        gan_lr = self.lr_g
-        cla_lr = self.lr_c
+        lr_d = self.lr_d
+        lr_g = self.lr_g
+        lr_c = self.lr_c
+
 
         # graph inputs for visualize training results
         self.sample_z = np.random.uniform(-1, 1, size=(self.visual_num, self.z_dim))
@@ -432,10 +432,12 @@ class TripleGAN(object):
             with open('lr_logs.txt', 'r') as f :
                 line = f.readlines()
                 line = line[-1]
-                gan_lr = float(line.split()[0])
-                cla_lr = float(line.split()[1])
-                print("gan_lr : ", gan_lr)
-                print("cla_lr : ", cla_lr)
+                lr_d = float(line.split()[0])
+                lr_g = float(line.split()[1])
+                lr_c = float(line.split()[2])
+                print("lr_d : ", lr_d)
+                print("lr_g : ", lr_g)
+                print("lr_c : ", lr_c)
             print(" [*] Load SUCCESS")
         else:
             start_epoch = 0
@@ -449,11 +451,13 @@ class TripleGAN(object):
         for epoch in range(start_epoch, self.epoch):
 
             if epoch >= self.decay_epoch :
-                gan_lr *= 0.995
-                cla_lr *= 0.99
+                lr_d *= 0.995
+                lr_g *= 0.995
+                lr_c *= 0.99
                 print("**** learning rate DECAY ****")
-                print("GAN lr is now:" + str(gan_lr))
-                print("CLA lr is now" + str(cla_lr))
+                print("lr_d is now:" + str(lr_d))
+                print("lr_g is now:" + str(lr_g))
+                print("lr_c is now" + str(lr_c))
 
             if epoch >= self.apply_epoch :
                 alpha_p = self.apply_alpha_p
@@ -473,7 +477,7 @@ class TripleGAN(object):
                 feed_dict = {
                     self.inputs: batch_images, self.y: batch_codes,
                     self.z: batch_z, self.alpha_p: alpha_p,
-                    self.gan_lr: gan_lr, self.cla_lr: cla_lr
+                    self.tf_lr_d: lr_d, self.tf_lr_g: lr_g, self.tf_lr_c: lr_c
                 }
                 # update D network
                 _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
@@ -524,10 +528,11 @@ class TripleGAN(object):
 
             line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
             print(line)
-            lr = "{} {}".format(gan_lr, cla_lr)
             with open('logs.txt', 'a') as f:
                 f.write(line)
-            with open('lr_logs.txt', 'a') as f :
+
+            lr = "{} {} {}".format(lr_d, lr_g, lr_c)
+            with open('lr_logs.txt', 'a') as f:
                 f.write(lr+'\n')
 
             # After an epoch, start_batch_id is set to zero
