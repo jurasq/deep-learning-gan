@@ -11,7 +11,7 @@ class GAN(TripleGAN):
                  nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir):
         TripleGAN.__init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
                            nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir)
-        self.model_name = "(Standard) GAN"  # for checkpoint
+        self.model_name = "dGAN"  # for checkpoint
         self.alpha = 0  # #so that discriminator loss = D_loss_real + D_loss_fake
 
         print("Initializing GAN with lr_d=%.3g, lr_g=%.3g" % (self.lr_d, self.lr_g))
@@ -244,7 +244,6 @@ class GAN(TripleGAN):
         start_time = time.time()
 
         for epoch in range(start_epoch, self.epoch):
-
             lr_d, lr_g, _ = self.update_learning_rates(epoch, lr_d=lr_d, lr_g=lr_g)
 
             # One epoch loop
