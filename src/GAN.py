@@ -245,7 +245,7 @@ class GAN(TripleGAN):
 
         for epoch in range(start_epoch, self.epoch):
 
-            lr_d, lr_g = self.update_learning_rates(epoch, lr_d=lr_d, lr_g=lr_g)
+            lr_d, lr_g, _ = self.update_learning_rates(epoch, lr_d=lr_d, lr_g=lr_g)
 
             # One epoch loop
             for idx in range(start_batch_id, self.num_batches):

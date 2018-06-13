@@ -19,6 +19,8 @@ class TripleGAN(object):
         self.model_name = "TripleGAN"  # name for checkpoint
 
         if self.dataset_name == 'dna':
+            self.categories = ['A', 'C', 'T', 'G']
+
             self.input_height = 4  # One-hot encoding
             self.input_width = 500  # Input sequence length
             self.output_height = 4  # One-hot encoding
@@ -501,15 +503,23 @@ class TripleGAN(object):
     def generate_and_save_samples(self, visual_sample_z, epoch):
         saving_start_time = time.time()
         # save some (15) generated sequences for every epoch
-        samples = self.sess.run(self.fake_sequences,
+        _, samples = self.sess.run(self.fake_sequences,
                                 feed_dict={self.visual_z: visual_sample_z})
-        save_sequences(samples,
+        one_hot_decoded = self.one_hot_decode(samples)
+        save_sequences(one_hot_decoded,
                        './' + check_folder(
                            self.result_dir + '/' + self.model_dir) + '/' + self.model_name + '_generated_sequences_epoch_{:02d}.txt'.format(
                            epoch))
         saving_end_time = time.time()
         print("Saved %d generated samples to file, took %4.4f" % (
             self.generated_batch_size, saving_end_time - saving_start_time))
+
+    def one_hot_decode(self, samples):
+        decode_indices = tf.argmax(samples, axis=1)
+        decoded = self.sess.run(decode_indices)
+        print(decoded)
+        exit(0)
+        return decoded
 
     def test_and_save_accuracy(self, epoch):
         # testing the accuracy (enhancers vs nonenhancers) of discriminator
