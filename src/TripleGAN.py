@@ -47,8 +47,7 @@ class TripleGAN(object):
             self.generated_batch_size = 15  # Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
             self.len_discrete_code = 4  # Think this is one-hot encoding for visualization ?
 
-            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = dna.prepare_data(
-                nexamples, self.test_set_size)  # trainX, trainY, testX, testY
+            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = self.init_data(nexamples)
 
             self.num_batches = len(self.data_X) // self.batch_size
 
@@ -57,6 +56,11 @@ class TripleGAN(object):
             raise NotImplementedError
 
         print("Initializing TripleGAN with lr_d=%.3g, lr_g=%.3g, lr_c=%.3g" % (self.lr_d, self.lr_g, self.lr_c))
+
+    def init_data(self, nexamples):
+        print("Loading both positive and negative samples...")
+        return dna.prepare_data(
+            nexamples, self.test_set_size, samples_to_use="both", test_both=True)  # trainX, trainY, testX, testY
 
     def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
@@ -314,7 +318,7 @@ class TripleGAN(object):
             start_epoch = (int)(checkpoint_counter / self.num_batches)
             start_batch_id = checkpoint_counter - start_epoch * self.num_batches
             counter = checkpoint_counter
-            with open('lr_logs.txt', 'r') as f:
+            with open(self.get_files_location('lr_logs.txt'), 'r') as f:
                 line = f.readlines()
                 line = line[-1]
                 lr_d = float(line.split()[0])
@@ -386,61 +390,6 @@ class TripleGAN(object):
             # save model for final step
         self.save(self.checkpoint_dir, counter)
 
-    def visualize_results(self, epoch):
-        # tot_num_samples = min(self.sample_num, self.batch_size)
-        image_frame_dim = int(np.floor(np.sqrt(self.generated_batch_size)))
-        z_sample = np.random.uniform(-1, 1, size=(self.generated_batch_size, self.z_dim))
-
-        """ random noise, random discrete code, fixed continuous code """
-        # y = np.random.choice(self.len_discrete_code, self.visual_num)
-        # Generated 10 labels with batch_size
-        y_one_hot = np.zeros((self.generated_batch_size, self.y_dim))
-        # y_one_hot[np.arange(self.visual_num), y] = 1
-
-        samples = self.sess.run(self.fake_sequences, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
-
-        print("Generated samples:")
-        print(samples)
-
-        return
-
-        # save_images(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
-        #             check_folder(
-        #                 self.result_dir + '/' + self.model_dir + '/all_classes') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes.png')
-
-        """ specified condition, random noise """
-        n_styles = 10  # must be less than or equal to self.batch_size
-
-        np.random.seed()
-        si = np.random.choice(self.visual_num, n_styles)
-
-        for l in range(self.len_discrete_code):
-            y = np.zeros(self.visual_num, dtype=np.int64) + l
-            y_one_hot = np.zeros((self.visual_num, self.y_dim))
-            y_one_hot[np.arange(self.visual_num), y] = 1
-
-            samples = self.sess.run(self.fake_images, feed_dict={self.visual_z: z_sample, self.visual_y: y_one_hot})
-            save_sequences(samples[:image_frame_dim * image_frame_dim, :, :, :], [image_frame_dim, image_frame_dim],
-                           check_folder(
-                            self.result_dir + '/' + self.model_dir + '/class_%d' % l) + '/' + self.model_name + '_epoch%03d' % epoch + '_test_class_%d.png' % l)
-
-            samples = samples[si, :, :, :]
-
-            if l == 0:
-                all_samples = samples
-            else:
-                all_samples = np.concatenate((all_samples, samples), axis=0)
-
-        """ save merged images to check style-consistency """
-        canvas = np.zeros_like(all_samples)
-        for s in range(n_styles):
-            for c in range(self.len_discrete_code):
-                canvas[s * self.len_discrete_code + c, :, :, :] = all_samples[c * n_styles + s, :, :, :]
-
-        save_sequences(canvas, [n_styles, self.len_discrete_code],
-                       check_folder(
-                        self.result_dir + '/' + self.model_dir + '/all_classes_style_by_style') + '/' + self.model_name + '_epoch%03d' % epoch + '_test_all_classes_style_by_style.png')
-
     def generate_and_save_samples(self, visual_sample_z, epoch):
         saving_start_time = time.time()
         # save some (15) generated sequences for every epoch
@@ -448,9 +397,8 @@ class TripleGAN(object):
                                 feed_dict={self.visual_z: visual_sample_z})
         one_hot_decoded = self.one_hot_decode(samples)
         save_sequences(one_hot_decoded,
-                       './' + check_folder(
-                           self.result_dir + '/' + self.model_dir) + '/' + self.model_name + '_generated_sequences_epoch_{:03d}.txt'.format(
-                           epoch))
+                       self.get_files_location('_generated_sequences_epoch_{:03d}.txt'.format(
+                           epoch)))
         saving_end_time = time.time()
         print("Saved %d generated samples to file, took %4.4f" % (
             self.generated_batch_size, saving_end_time - saving_start_time))
@@ -477,24 +425,24 @@ class TripleGAN(object):
             })
 
             test_acc += acc_
-        test_acc /= 10
+        test_acc /= int(self.test_set_size/self.test_batch_size)
 
         summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
         self.writer.add_summary(summary_test, epoch)
 
         line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
         print(line)
-        with open('accuracy.txt', 'a') as f:
+        with open(self.get_files_location('accuracy.txt'), 'a') as f:
             f.write(line)
 
     def save_learning_rates(self, lr_d, lr_g, lr_c=None):
         if lr_c:
-                   lr = "{} {} {}".format(lr_d, lr_g, lr_c)
-            with open('lr_logs.txt', 'a') as f:
+            lr = "{} {} {}".format(lr_d, lr_g, lr_c)
+            with open(self.get_files_location('lr_logs.txt'), 'a') as f:
                     f.write(lr + '\n')
         else:
             lr = "{} {}".format(lr_d, lr_g)
-            with open('lr_logs.txt', 'a') as f:
+            with open(self.get_files_location('lr_logs.txt'), 'a') as f:
                 f.write(lr + '\n')
 
     def update_learning_rates(self, epoch, lr_d, lr_g, lr_c=None):
@@ -516,6 +464,10 @@ class TripleGAN(object):
                 print("lr_g lr is now: %.3g" % lr_g)
 
         return lr_d, lr_g, lr_c
+
+    def get_files_location(self, suffix):
+        return './' + check_folder(
+                           self.result_dir + '/' + self.model_dir) + '/' + self.model_name + suffix;
 
     @property
     def model_dir(self):

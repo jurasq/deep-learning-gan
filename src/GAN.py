@@ -16,6 +16,12 @@ class GAN(TripleGAN):
 
         print("Initializing GAN with lr_d=%.3g, lr_g=%.3g" % (self.lr_d, self.lr_g))
 
+    # Called in the super class
+    def init_data(self, nexamples):
+        print("Loading only positive samples...")
+        return dna.prepare_data(
+            nexamples, self.test_set_size, samples_to_use="pos", test_both=True)  # trainX, trainY, testX, testY
+
     def discriminator(self, dna_sequence, y=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # TODO: make a reverse filter conv layer like in the Enhancer paper
@@ -226,7 +232,7 @@ class GAN(TripleGAN):
             start_epoch = int(checkpoint_counter / self.num_batches)
             start_batch_id = checkpoint_counter - start_epoch * self.num_batches
             counter = checkpoint_counter
-            with open('lr_logs.txt', 'r') as f:
+            with open(self.get_files_location('lr_logs.txt'), 'r') as f:
                 line = f.readlines()
                 line = line[-1]
                 lr_d = float(line.split()[0])
