@@ -117,3 +117,6 @@ data_encoded/
 
 #checkpoints
 src/checkpoint/
+
+results/
+src/lr_logs.txt
