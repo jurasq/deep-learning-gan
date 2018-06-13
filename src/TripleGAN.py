@@ -19,7 +19,7 @@ class TripleGAN(object):
         self.model_name = "TripleGAN"  # name for checkpoint
 
         if self.dataset_name == 'dna':
-            self.categories = ['A', 'C', 'T', 'G']
+            self.categories = np.asarray(['A', 'C', 'T', 'G'])
 
             self.input_height = 4  # One-hot encoding
             self.input_width = 500  # Input sequence length
@@ -517,9 +517,8 @@ class TripleGAN(object):
     def one_hot_decode(self, samples):
         decode_indices = tf.argmax(samples, axis=1)
         decoded = self.sess.run(decode_indices)
-        print(decoded)
-        exit(0)
-        return decoded
+        seqs = tf.squeeze(tf.reduce_join(self.categories[decoded], 1))
+        return self.sess.run(seqs)
 
     def test_and_save_accuracy(self, epoch):
         # testing the accuracy (enhancers vs nonenhancers) of discriminator

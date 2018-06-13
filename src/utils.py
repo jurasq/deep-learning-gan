@@ -15,8 +15,7 @@ def check_folder(log_dir):
 
 def save_sequences(sequences, filepath):
     with open(filepath, "w") as f:
-        indices = tf.argmax(sequences, axis=1)
-        print(indices)
+        f.write("\n".join(sequences))
 
 
 def imsave(images, size, path):
