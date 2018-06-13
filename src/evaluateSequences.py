@@ -11,10 +11,12 @@ import pandas as pd
 import numpy as np
 
 #used this variables for testing. will be removed.
-sequences = dna.load_dna_data(13000,1000,"../Data",["Human"],1)
-train_sequences = sequences[0][0]
-test_sequences = sequences[1][0]
+#sequences = dna.load_dna_data(13000,1000,"../Data",["Human"],1)
+#train_sequences = sequences[0][0]
+#test_sequences = sequences[1][0]
 
+#this function converts the sequences in matrix representation (output of load_dna_data) into nucleotide representation
+#output is array of arrays with the same length of the sequences, where each element of these arrays represents a nucleotide
 def decode_dna_matrices(sequences):
     seq_shape =sequences[0].shape 
     decoded_sequences = np.empty([sequences.shape[0],seq_shape[1]],dtype='object')
@@ -30,7 +32,9 @@ def decode_dna_matrices(sequences):
     return (decoded_sequences)
 
 
-##Computing edit distances 
+##Computes edit distances(Levenshtein distances) - number of transformations to convert sequence 1 in sequence 2
+    #input - arrays or strings representing the sequences 
+    #output - integer: levenshtein distance between the sequences
 #from https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
 def edit_dist(s1,s2):
     if len(s1) < len(s2):
@@ -50,7 +54,10 @@ def edit_dist(s1,s2):
         previous_row = current_row
     
     return previous_row[-1]
-    
+
+#computes the edit distances between the sequences belonging to two sets
+#input:two sets of sequences in encoded form (matrix representation)
+#output ; array with all the computed edit distances between the sequences in these sets (between-group distances)
 def pairwise_edit_distances (train_sequences,test_sequences):
     print ("Decoding seq 1")
     dec_tr_seq = decode_dna_matrices(train_sequences)
@@ -66,5 +73,3 @@ def pairwise_edit_distances (train_sequences,test_sequences):
         n_id=n_id+1
     return(edit_distances)
         
-        
-    
