@@ -508,7 +508,7 @@ class TripleGAN(object):
         one_hot_decoded = self.one_hot_decode(samples)
         save_sequences(one_hot_decoded,
                        './' + check_folder(
-                           self.result_dir + '/' + self.model_dir) + '/' + self.model_name + '_generated_sequences_epoch_{:02d}.txt'.format(
+                           self.result_dir + '/' + self.model_dir) + '/' + self.model_name + '_generated_sequences_epoch_{:03d}.txt'.format(
                            epoch))
         saving_end_time = time.time()
         print("Saved %d generated samples to file, took %4.4f" % (
