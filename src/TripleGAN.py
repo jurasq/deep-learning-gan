@@ -384,7 +384,7 @@ class TripleGAN(object):
             # non-zero value is only for the first epoch after loading pre-trained model
             start_batch_id = 0
 
-            if counter % 100 == 0:
+            if epoch % 50 == 0:
                 # save model
                 self.save(self.checkpoint_dir, counter)
 
