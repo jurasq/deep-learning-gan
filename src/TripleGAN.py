@@ -47,7 +47,7 @@ class TripleGAN(object):
             self.generated_batch_size = 500  # Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
             self.len_discrete_code = 4  # Think this is one-hot encoding for visualization ?
 
-            self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = self.init_data(nexamples)
+            self.data_X, self.data_y, self.test_X, self.test_y = self.init_data(nexamples)
 
             self.num_batches = len(self.data_X) // self.batch_size
 
@@ -57,8 +57,9 @@ class TripleGAN(object):
 
         print("Initializing TripleGAN with lr_d=%.3g, lr_g=%.3g, lr_c=%.3g" % (self.lr_d, self.lr_g, self.lr_c))
 
+        
     def init_data(self, nexamples):
-        print("Loading both positive and negative samples...")
+        print("Running TripleGAN, so loading both positive and negative samples...")
         return dna.prepare_data(
             nexamples, self.test_set_size, samples_to_use="both", test_both=True)  # trainX, trainY, testX, testY
 
@@ -193,8 +194,7 @@ class TripleGAN(object):
 
             logits = tf.layers.dense(inputs=l8, units=2)
 
-        #TODO: we're returning softmax, but cross_entropy_with_logits is used - either need to return logits or change cross_entropy_with_logits to normal cross_entropy
-        return tf.nn.softmax(logits, axis=1, name="softmax_tensor")
+        return logits
 
     def build_model(self):
         input_dims = [self.input_height, self.input_width, self.c_dim]
@@ -234,32 +234,33 @@ class TripleGAN(object):
 
         # output of C for real images
         C_real_logits = self.classifier(self.inputs, is_training=True, reuse=False)
-        R_L = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=C_real_logits))
+        R_L = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=C_real_logits))
 
         # output of C for fake images
         C_fake_logits = self.classifier(G_gene, is_training=True, reuse=True)
-        R_P = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=C_fake_logits))
-
-        #
+        R_P = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=C_fake_logits))
 
         # get loss for discriminator
         d_loss_real = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_real_logits, labels=tf.ones_like(D_real_logits)))
+            tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_real_logits,
+                                                              labels=tf.ones(self.batch_size, dtype=tf.int32)))
         d_loss_fake = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.zeros_like(D_fake_logits)))
+            tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_fake_logits,
+                                                              labels=tf.zeros(self.batch_size, dtype=tf.int32)))
         self.d_loss = d_loss_real + d_loss_fake
 
         # get loss for generator
         self.g_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake_logits)))
+            tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_fake_logits,
+                                                           labels=tf.ones(self.batch_size, dtype=tf.int32)))
 
         # test loss for classify
-        test_Y = self.classifier(self.test_inputs, is_training=False, reuse=True)
-        correct_prediction = tf.equal(tf.argmax(test_Y, 1), tf.argmax(self.test_label, 1))
+        test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
+        correct_prediction = tf.equal(tf.argmax(test_logits, 1), tf.argmax(self.test_label, 1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         # get loss for classifier
-        self.c_loss = R_L +  R_P
+        self.c_loss = R_L + R_P
 
         """ Training """
 
@@ -425,7 +426,7 @@ class TripleGAN(object):
                 self.test_inputs: test_batch_x,
                 self.test_label: test_batch_y
             })
-            print("Batch #%d: %f" % (idx+1, acc_))
+            print("Batch #%2d: %f" % (idx+1, acc_))
 
             test_acc += acc_
         test_acc /= int(self.test_set_size/self.test_batch_size)

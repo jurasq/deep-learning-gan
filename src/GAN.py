@@ -5,6 +5,8 @@ from TripleGAN import TripleGAN
 from utils import *
 import time
 
+DEBUG_MODE = False
+
 
 class GAN(TripleGAN):
     def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
@@ -18,7 +20,7 @@ class GAN(TripleGAN):
 
     # Called in the super class
     def init_data(self, nexamples):
-        print("Loading only positive samples...")
+        print("Running dGAN, so loading only positive samples...")
         return dna.prepare_data(
             nexamples, self.test_set_size, samples_to_use="pos", test_both=True)  # trainX, trainY, testX, testY
 
@@ -152,29 +154,29 @@ class GAN(TripleGAN):
         # A Game with two Players
 
         # output of D for real images
-        D_real, D_real_logits, _ = self.discriminator(self.inputs, y=None, is_training=True, reuse=False)
+        D_real, self.D_real_logits, _ = self.discriminator(self.inputs, y=None, is_training=True, reuse=False)
 
         # output of D for fake images
-        G_approx_gene, G_gene = self.generator(self.z, y=None, is_training=True, reuse=False)
-        D_fake, D_fake_logits, _ = self.discriminator(G_gene, y=None, is_training=True, reuse=True)
+        G_approx_gene, self.G_gene = self.generator(self.z, y=None, is_training=True, reuse=False)
+        D_fake, self.D_fake_logits, _ = self.discriminator(self.G_gene, y=None, is_training=True, reuse=True)
 
         #
 
         # get loss for discriminator
-        d_loss_real = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_real_logits, labels=tf.ones_like(D_real_logits)))
-        d_loss_fake = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.zeros_like(D_fake_logits)))
+        self.test_d_loss_real = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.D_real_logits, labels=tf.ones(self.batch_size, dtype=tf.int32))
+        self.test_d_loss_fake = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.D_fake_logits, labels=tf.zeros(self.batch_size, dtype=tf.int32))
+        d_loss_real = tf.reduce_mean(self.test_d_loss_real)
+        d_loss_fake = tf.reduce_mean(self.test_d_loss_fake)
 
         self.d_loss = d_loss_real + d_loss_fake
 
         # get loss for generator
         self.g_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones_like(D_fake_logits)))
+            tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.D_fake_logits, labels=tf.ones(self.batch_size, dtype=tf.int32)))
 
         # test loss for classification using the discriminator
-        _, _, predicted_test_logits = self.discriminator(self.test_inputs, is_training=False, reuse=True)
-        correct_prediction = tf.equal(tf.argmax(predicted_test_logits, 1), tf.argmax(self.test_label, 1))
+        _, _, predicted_test_softmax = self.discriminator(self.test_inputs, is_training=False, reuse=True)
+        correct_prediction = tf.equal(tf.argmax(predicted_test_softmax, 1), tf.argmax(self.test_label, 1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         """ Training """
@@ -267,6 +269,10 @@ class GAN(TripleGAN):
                 _, summary_str_g, g_loss = self.sess.run([self.g_optim, self.g_sum, self.g_loss], feed_dict=feed_dict)
                 self.writer.add_summary(summary_str_g, counter)
 
+                if DEBUG_MODE:
+                    self.run_debug_statements(feed_dict)
+
+
                 # display training status
                 counter += 1
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
@@ -292,3 +298,16 @@ class GAN(TripleGAN):
 
             # save model for final step
         self.save(self.checkpoint_dir, counter)
+
+    def run_debug_statements(self, feed_dict):
+        logits_r, logits_f, loss_r, loss_f = self.sess.run([self.D_real_logits, self.D_fake_logits,
+                                                            self.test_d_loss_real, self.test_d_loss_fake],
+                                                           feed_dict=feed_dict)
+        print("Logits for real examples:")
+        print(logits_r)
+        print("Loss real:")
+        print(loss_r)
+        print("Logits for fake examples:")
+        print(logits_f)
+        print("Loss fake:")
+        print(loss_f)

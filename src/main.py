@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=10, help='The size of batch')
     parser.add_argument('--unlabel_batch_size', type=int, default=250, help='The size of unlabel batch')
     parser.add_argument('--z_dim', type=int, default=200, help='Dimension of noise vector')
-    parser.add_argument('--lr_d', type=float, default=2e-5, help='learning rate of discriminator of GAN')
+    parser.add_argument('--lr_d', type=float, default=2e-7, help='learning rate of discriminator of GAN')
     parser.add_argument('--lr_g', type=float, default=2e-2, help='learning rate of generator of GAN')
     parser.add_argument('--lr_c', type=float, default=2e-7, help='learning rate of classifier of TripleGAN')
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoint',
@@ -70,7 +70,7 @@ def main():
 
     # open session
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
-        gan = GAN(sess, epoch=args.epoch, batch_size=args.batch_size, unlabel_batch_size=args.unlabel_batch_size,
+        gan = TripleGAN(sess, epoch=args.epoch, batch_size=args.batch_size, unlabel_batch_size=args.unlabel_batch_size,
                   z_dim=args.z_dim, dataset_name=args.dataset, nexamples=args.n, lr_d = args.lr_d, lr_g = args.lr_g, lr_c = args.lr_c,
                   checkpoint_dir=args.checkpoint_dir, result_dir=args.result_dir, log_dir=args.log_dir)
 
@@ -84,9 +84,6 @@ def main():
         gan.train()
         print(" [*] Training finished!")
 
-        # visualize learned generator
-        gan.visualize_results(args.epoch-1)
-        print(" [*] Testing finished!")
 
 if __name__ == '__main__':
     main()
