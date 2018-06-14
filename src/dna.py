@@ -13,40 +13,16 @@ def prepare_data(nexamples_train, nexamples_test, samples_to_use="pos", test_bot
     num_classes = 2  # Number of classes
 
     (train_data, train_labels), (test_data, test_labels) = load_dna_data(nexamples_train, nexamples_test, "../Data",
-                                                                         ["Human"], samples_to_use)
+                                                                         ["Human"], samples_to_use, test_both=test_both)
 
-    # Pre-processing should happen here if wanted if wanted. We have processed data.
-
-    criteria = nexamples_train // num_classes
-    input_dict, labelled_x, labelled_y, unlabelled_x, unlabelled_y = defaultdict(int), list(), list(), list(), list()
-
-    for image, label in zip(train_data, train_labels):
-        if input_dict[int(label)] != criteria:
-            input_dict[int(label)] += 1
-            labelled_x.append(image)
-            labelled_y.append(label)
-
-        unlabelled_x.append(image)
-        unlabelled_y.append(label)
-
-    labelled_x = np.asarray(labelled_x)
-    labelled_y = np.asarray(labelled_y)
-    unlabelled_x = np.asarray(unlabelled_x)
-    unlabelled_y = np.asarray(unlabelled_y)
-
-    print("labelled data:", np.shape(labelled_x), np.shape(labelled_y))
-    print("unlabelled data :", np.shape(unlabelled_x), np.shape(unlabelled_y))
+    print("Train data:", np.shape(train_data), np.shape(train_labels))
     print("Test data :", np.shape(test_data), np.shape(test_labels))
     print("======Load finished======")
 
     print("======Shuffling data======")
-    indices = np.random.permutation(len(labelled_x))
-    labelled_x = labelled_x[indices]
-    labelled_y = labelled_y[indices]
-
-    indices = np.random.permutation(len(unlabelled_x))
-    unlabelled_x = unlabelled_x[indices]
-    unlabelled_y = unlabelled_y[indices]
+    indices = np.random.permutation(len(train_data))
+    labelled_x = train_data[indices]
+    labelled_y = train_labels[indices]
 
     print("======Prepare Finished======")
 
@@ -54,18 +30,14 @@ def prepare_data(nexamples_train, nexamples_test, samples_to_use="pos", test_bot
     for i, label in enumerate(labelled_y):
         labelled_y_vec[i, labelled_y[i]] = 1.0
 
-    unlabelled_y_vec = np.zeros((len(unlabelled_y), num_classes), dtype=np.float)
-    for i, label in enumerate(unlabelled_y):
-        unlabelled_y_vec[i, unlabelled_y[i]] = 1.0
-
     test_labels_vec = np.zeros((len(test_labels), num_classes), dtype=np.float)
     for i, label in enumerate(test_labels):
         test_labels_vec[i, test_labels[i]] = 1.0
 
-    return labelled_x, labelled_y_vec, unlabelled_x, unlabelled_y_vec, test_data, test_labels_vec
+    return labelled_x, labelled_y_vec, test_data, test_labels_vec
 
 
-def load_dna_data(num_train, num_test, base_folder, species, samples_to_use):
+def load_dna_data(num_train, num_test, base_folder, species, samples_to_use, test_both=None):
     # Input:
     #   num_train: (int) Number of training samples used, per species.
     #   num_test: (int) Number of test samples used, per species.
@@ -77,7 +49,7 @@ def load_dna_data(num_train, num_test, base_folder, species, samples_to_use):
     #       x_train, y_train: uint8 array of one-hot encoded DNA with shape (num_train, 1, 4, 500).
     #       x_test, y_test: uint8 array of category labels (integers in range 0-9) with shape (num_samples,).
     # Example:
-    #   (x_train, y_train), (x_test, y_test) = load_dna_data(10000, 5000, "Data", ["Human", "Pig", "Dolphin"], -1)
+    #   (x_train, y_train), (x_test, y_test) = load_dna_data(10000, 5000, "Data", ["Human", "Pig", "Dolphin"], "neg")
     if samples_to_use not in ["neg", "pos", "both"]:
         raise ValueError("Samples must have values: \"neg\" (only neg), \"both\" (neg-pos) or \"pos\" (only pos). \n")
 
@@ -133,6 +105,8 @@ def load_dna_data(num_train, num_test, base_folder, species, samples_to_use):
     SEQ_LEN = 500
     x_train = x_train.reshape((-1, SEQ_LEN, 4, 1)).transpose(0, 2, 1, 3)
     x_test = x_test.reshape((-1, SEQ_LEN, 4, 1)).transpose(0, 2, 1, 3)
+    y_train = y_train.transpose()
+    y_test = y_test.transpose()
 
     # Check for bugs
     for i in range(x_train.shape[0]):
