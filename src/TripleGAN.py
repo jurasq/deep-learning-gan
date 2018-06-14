@@ -416,7 +416,7 @@ class TripleGAN(object):
         # testing the accuracy (enhancers vs nonenhancers) of discriminator
         test_acc = 0.0
 
-        
+        print("==== Accuracy for batches: (first half are positive (enhancers), last half are negative (non-enhancers)) ====")
         for idx in range(int(self.test_set_size/self.test_batch_size)):
             test_batch_x = self.test_X[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
             test_batch_y = self.test_y[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
@@ -425,7 +425,7 @@ class TripleGAN(object):
                 self.test_inputs: test_batch_x,
                 self.test_label: test_batch_y
             })
-            print("Got acc %f" % acc_)
+            print("Batch #%d: %f" % (idx+1, acc_))
 
             test_acc += acc_
         test_acc /= int(self.test_set_size/self.test_batch_size)
