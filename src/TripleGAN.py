@@ -93,7 +93,7 @@ class TripleGAN(object):
         with tf.variable_scope(scope, reuse=reuse):
             # y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
             # noise_vector = conv_concat(noise_vector,y)
-            batch_size = self.batch_size
+            batch_size = tf.cast(noise_vector.shape[0], dtype=tf.int32)
             g_dim = 64  # Number of filters of first layer of generator
             c_dim = 1  # dimensionality of the output
             s = 500  # Final length of the sequence

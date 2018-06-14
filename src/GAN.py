@@ -54,7 +54,7 @@ class GAN(TripleGAN):
 
     def generator(self, noise_vector, y=None, scope="generator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
-            batch_size = self.batch_size
+            batch_size = tf.cast(noise_vector.shape[0], dtype=tf.int32)
             g_dim = 64  # Number of filters of first layer of generator
             c_dim = 1  # dimensionality of the output
             s = 500  # Final length of the sequence
