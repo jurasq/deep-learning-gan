@@ -288,8 +288,9 @@ class GAN(TripleGAN):
             # non-zero value is only for the first epoch after loading pre-trained model
             start_batch_id = 0
 
-            # save model
-            self.save(self.checkpoint_dir, counter)
+            if counter % 100 == 0:
+                # save model
+                self.save(self.checkpoint_dir, counter)
 
             # save model for final step
         self.save(self.checkpoint_dir, counter)
