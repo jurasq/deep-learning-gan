@@ -24,11 +24,9 @@ class GAN(TripleGAN):
 
     def discriminator(self, dna_sequence, y=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
-            # TODO: make a reverse filter conv layer like in the Enhancer paper
-
-            # convolutional + pooling #1
-            l1 = conv_layer(name_scope="conv1", input_tensor=dna_sequence, num_kernels=20,
-                            kernel_shape=[4, 9], relu=True, is_training=is_training)
+            # convolutional with reverse filters like in paper + pooling #1
+            l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=dna_sequence, num_kernels=20,
+                                          kernel_shape=[4, 9], relu=True, is_training=is_training)
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3])
 
             # convolutional + pooling #2
@@ -47,10 +45,10 @@ class GAN(TripleGAN):
             l8 = tf.layers.dense(inputs=l7, units=45)
 
             logits = tf.layers.dense(inputs=l8, units=2)  # 2 units, ie. probability of each class (fake, real)
-            logits_sigmoid = tf.nn.softmax(logits)
+            softmax = tf.nn.softmax(logits)
 
         # previously used only logits, now returning the 3 for compatibility with triple gan
-        return l8, logits, logits_sigmoid
+        return l8, logits, softmax
 
     def generator(self, noise_vector, y=None, scope="generator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
@@ -68,8 +66,8 @@ class GAN(TripleGAN):
             # this is a magic number which I'm not sure what means yet
             magic_number = 5
 
-            output_mlp = mlp('mlp', noise_vector, batch_norm=False, relu=False, is_training=is_training)
-
+            # output_mlp = mlp('mlp', noise_vector, batch_norm=False, relu=False, is_training=is_training)
+            output_mlp = tf.layers.dense(inputs=noise_vector, units=int(width / 4)* (s16 + 1) * magic_number)
             h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
             h0 = tf.nn.relu(h0)
             # Dimensions of h0 = batch_size x 1 x 31 x magic_number
@@ -119,7 +117,6 @@ class GAN(TripleGAN):
             b_conv4 = tf.get_variable('g_bconv4', [output4_shape[-1]], initializer=tf.constant_initializer(.1))
             H_conv4 = tf.nn.conv2d_transpose(H_conv3, W_conv4, output_shape=output4_shape,
                                              strides=[1, 1, 2, 1], padding='VALID') + b_conv4
-            #         H_conv4 = tf.nn.tanh(H_conv4)
 
             H_conv4 = tf.nn.softmax(H_conv4, axis=1, name="softmax_H_conv4")
             gene = tf.where(tf.equal(tf.reduce_max(H_conv4, axis=1, keep_dims=True), H_conv4),
@@ -147,7 +144,7 @@ class GAN(TripleGAN):
         # Labels for the generated sequences - this is not really needed
         self.visual_y = tf.placeholder(tf.float32, [self.generated_batch_size, self.y_dim], name='visual_y')
 
-        # noises, shape: [batch_size, z_dim
+        # noises, shape: [batch_size, z_dim]
         self.z = tf.placeholder(tf.float32, [self.batch_size, self.z_dim], name='z')
         self.visual_z = tf.placeholder(tf.float32, [self.generated_batch_size, self.z_dim], name='visual_z')
 
@@ -276,7 +273,8 @@ class GAN(TripleGAN):
                       % (epoch, idx, self.num_batches, time.time() - start_time, d_loss, g_loss))
 
             """ Save generated samples to a file"""
-            self.generate_and_save_samples(visual_sample_z=visual_sample_z, epoch=epoch);
+            if epoch != 0 and epoch % 10 == 0:
+                self.generate_and_save_samples(visual_sample_z=visual_sample_z, epoch=epoch);
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)
@@ -288,7 +286,7 @@ class GAN(TripleGAN):
             # non-zero value is only for the first epoch after loading pre-trained model
             start_batch_id = 0
 
-            if epoch % 50 == 0:
+            if epoch != 0 and epoch % 50 == 0:
                 # save model
                 self.save(self.checkpoint_dir, counter)
 

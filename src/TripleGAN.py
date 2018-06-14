@@ -43,8 +43,8 @@ class TripleGAN(object):
             # in the Kingma and Ba paper (in the formula just before Section 2.1),
             # not the epsilon in Algorithm 1 of the paper.
             self.epsilon = 1e-8
-            self.decay_epoch = 50  # Point in epoch we start adding decay. if epoch >= decay_epoch, add decay. Note decay is hard coded.
-            self.generated_batch_size = 15  # Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
+            self.decay_epoch = 100  # Point in epoch we start adding decay. if epoch >= decay_epoch, add decay. Note decay is hard coded.
+            self.generated_batch_size = 500  # Visualization frame size. We get a floor(sqrt(visual_num)) x floor(sqrt(visual_num)) sample
             self.len_discrete_code = 4  # Think this is one-hot encoding for visualization ?
 
             self.data_X, self.data_y, self.unlabelled_X, self.unlabelled_y, self.test_X, self.test_y = self.init_data(nexamples)
@@ -67,7 +67,7 @@ class TripleGAN(object):
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
 
             x = conv_concat(x, y)
-            x = conv_layer(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
+            x = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
             x = max_pool_layer(name_scope="max_pool_1", input_tensor=x, pool_size=[1, 3])
 
             x = conv_concat(x, y)
@@ -84,9 +84,9 @@ class TripleGAN(object):
             x = tf.layers.dense(inputs=x, units=90)
             x = tf.layers.dense(inputs=x, units=45)
             logits = tf.layers.dense(inputs=x, units=2)
-            logits_sigmoid = tf.nn.softmax(logits)
+            softmax = tf.nn.softmax(logits)
 
-            return x, logits, logits_sigmoid
+            return x, logits, softmax
 
     def generator(self, noise_vector, y_, scope="generator", is_training=True, reuse=False):
 
@@ -107,7 +107,8 @@ class TripleGAN(object):
             # this is a magic number which I'm not sure what means yet
             magic_number = 5
 
-            output_mlp = mlp('mlp', noise_vector, batch_norm=False, relu=False)
+            # output_mlp = mlp('mlp', noise_vector, batch_norm=False, relu=False)
+            output_mlp = tf.layers.dense(inputs=noise_vector, units=int(width / 4) * (s16 + 1) * magic_number)
 
             h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
             h0 = tf.nn.relu(h0)
@@ -172,8 +173,6 @@ class TripleGAN(object):
             if (reuse):
                 tf.get_variable_scope().reuse_variables()
 
-            # TODO: make a reverse filter conv layer like in the Enhancer paper 
-
             # convolutional + pooling #1
             l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20,
                                           kernel_shape=[4, 9], relu=True)
@@ -194,6 +193,7 @@ class TripleGAN(object):
 
             logits = tf.layers.dense(inputs=l8, units=2)
 
+        #TODO: we're returning softmax, but cross_entropy_with_logits is used - either need to return logits or change cross_entropy_with_logits to normal cross_entropy
         return tf.nn.softmax(logits, axis=1, name="softmax_tensor")
 
     def build_model(self):
@@ -372,7 +372,8 @@ class TripleGAN(object):
 
 
             """ Save generated samples to a file"""
-            self.generate_and_save_samples(visual_sample_z=visual_sample_z, epoch=epoch);
+            if epoch != 0 and epoch % 10 == 0:
+                self.generate_and_save_samples(visual_sample_z=visual_sample_z, epoch=epoch);
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)
@@ -384,7 +385,7 @@ class TripleGAN(object):
             # non-zero value is only for the first epoch after loading pre-trained model
             start_batch_id = 0
 
-            if epoch % 50 == 0:
+            if epoch != 0 and epoch % 50 == 0:
                 # save model
                 self.save(self.checkpoint_dir, counter)
 
@@ -424,6 +425,7 @@ class TripleGAN(object):
                 self.test_inputs: test_batch_x,
                 self.test_label: test_batch_y
             })
+            print("Got acc %f" % acc_)
 
             test_acc += acc_
         test_acc /= int(self.test_set_size/self.test_batch_size)
