@@ -112,9 +112,8 @@ def conv_layer_original(x, filter_size, kernel, stride=1, padding='SAME', wn=Fal
             x = tf.layers.conv2d(inputs=x, filters=filter_size, kernel_size=kernel, kernel_initializer=he_init, strides=stride, padding=padding)
         return x
 
-
 def conv_max_forward_reverse(name_scope, input_tensor, num_kernels, kernel_shape,
-                             stride=1, padding='VALID', relu=True, lrelu=False, name_suffix = None):
+                             stride=1, padding='VALID', relu=True, lrelu=False, name_suffix = None, batch_norm=False, is_training=True):
     """
     Returns a convolution layer
     """
@@ -144,6 +143,11 @@ def conv_max_forward_reverse(name_scope, input_tensor, num_kernels, kernel_shape
                                     name="reverse_conv") + biases
         # takes the maximum between the forward weights and the rev.-comp.-weights:
         max_conv = tf.maximum(forward_conv, reverse_conv, name="conv1")
+
+        # Add batch normalisation if specified
+        if batch_norm:
+            max_conv = tf.contrib.layers.batch_norm(inputs=max_conv, center=True, scale=True, is_training=is_training)
+
         if relu and lrelu:
             return tf.nn.leaky_relu(max_conv, name="lrelu_"+name_suffix)
         elif relu:

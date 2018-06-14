@@ -1,0 +1,2 @@
+Epoch: [ 0], test_acc: 0.3060
+Epoch: [ 1], test_acc: 0.2850
