@@ -118,8 +118,8 @@ def load_dna_data(num_train, num_test, base_folder, species, samples_to_use):
         # Always choose num_test/2 from positive and num_test/2 from negative, excluding the training
         free_pos_idx = np.setdiff1d(np.arange(npositive), train_idx)
         free_neg_idx = np.setdiff1d(np.arange(nnegative) + npositive, train_idx)
-        test_pos_idx = np.random.choice(free_pos_idx, num_test/2)
-        test_neg_idx = np.random.choice(free_neg_idx, num_test/2)
+        test_pos_idx = np.random.choice(free_pos_idx, int(num_test/2))
+        test_neg_idx = np.random.choice(free_neg_idx, int(num_test/2))
 
         test_idx = np.concatenate([test_pos_idx, test_neg_idx])
         
