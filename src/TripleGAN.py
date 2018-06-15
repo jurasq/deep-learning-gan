@@ -370,13 +370,13 @@ class TripleGAN(object):
         pos_labels = np.ones((int(self.generated_batch_size/2), 1), dtype=int)
         neg_labels = np.zeros((int(self.generated_batch_size/2), 1), dtype=int)
         gen_labels = np.concatenate([pos_labels, neg_labels])
-        gen_labels = gen_labels.transpose()
+        # gen_labels = gen_labels.transpose()
 
         visual_sample_y = np.zeros((len(gen_labels), 2), dtype=np.float)
         for i, label in enumerate(gen_labels):
             visual_sample_y[i, gen_labels[i]] = 1.0
 
-
+        print(visual_sample_y.shape)
 
         # saver to save model
         self.saver = tf.train.Saver()
@@ -445,7 +445,7 @@ class TripleGAN(object):
 
 
             """ Save generated samples to a file"""
-            if epoch != 0 and epoch % 10 == 0:
+            if  epoch!= 0 and epoch % 10 == 0:
                 self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y = visual_sample_y,  epoch=epoch);
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
