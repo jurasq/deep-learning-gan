@@ -60,6 +60,7 @@ class TripleGAN(object):
         
     def init_data(self, nexamples):
         print("Running TripleGAN, so loading both positive and negative samples...")
+        print(nexamples)
         return dna.prepare_data(
             nexamples, self.test_set_size, samples_to_use="both", test_both=True)  # trainX, trainY, testX, testY
 
@@ -92,8 +93,12 @@ class TripleGAN(object):
     def generator(self, noise_vector, y_, scope="generator", is_training=True, reuse=False):
 
         with tf.variable_scope(scope, reuse=reuse):
-            # y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
-            # noise_vector = conv_concat(noise_vector,y)
+            noise_vector = concat([noise_vector, y_])
+            y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
+            
+            
+
+
             batch_size = tf.cast(noise_vector.shape[0], dtype=tf.int32)
             g_dim = 64  # Number of filters of first layer of generator
             c_dim = 1  # dimensionality of the output
@@ -111,11 +116,20 @@ class TripleGAN(object):
             # output_mlp = mlp('mlp', noise_vector, batch_norm=False, relu=False)
             output_mlp = tf.layers.dense(inputs=noise_vector, units=int(width / 4) * (s16 + 1) * magic_number)
 
+
+
             h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
             h0 = tf.nn.relu(h0)
             # Dimensions of h0 = batch_size x 1 x 31 x magic_number
+            print('trung to se what to concat x', h0.get_shape())  
+            print('trung to se what to concat y', y.get_shape())  
+            h0 = conv_concat(h0, y)
+
+            print('post shape', h0.get_shape())
 
             # First DeConv Layer
+
+
             output1_shape = [batch_size, int(width / 2), s8 + 1, g_dim * 4]
             W_conv1 = tf.get_variable('g_wconv1', [5, 5, output1_shape[-1], int(h0.get_shape()[-1])],
                                       initializer=tf.truncated_normal_initializer(stddev=0.1))
@@ -127,8 +141,14 @@ class TripleGAN(object):
             H_conv1 = tf.contrib.layers.batch_norm(inputs=H_conv1, center=True, scale=True, is_training=True,
                                                    scope="g_bn1")
             H_conv1 = tf.nn.relu(H_conv1)
-            # Dimensions of H_conv1 = batch_size x 1 x 62 x 256
 
+                 
+            # Dimensions of H_conv1 = batch_size x 1 x 62 x 256
+            print('trung to se what to concat H_conv1', H_conv1.get_shape())  
+            print('trung to se what to concat y', y.get_shape())  
+            H_conv1 = conv_concat(H_conv1, y)
+
+            print('post shape', H_conv1.get_shape())
             # Second DeConv Layer
             output2_shape = [batch_size, int(width / 2), s4, g_dim * 2]
             W_conv2 = tf.get_variable('g_wconv2', [5, 5, output2_shape[-1], int(H_conv1.get_shape()[-1])],
@@ -140,6 +160,11 @@ class TripleGAN(object):
                                                    scope="g_bn2")
             H_conv2 = tf.nn.relu(H_conv2)
             # Dimensions of H_conv2 = batch_size x 2 x 124 x 128
+            print('trung to se what to concat H_conv2', H_conv2.get_shape())  
+            print('trung to se what to concat y', y.get_shape())  
+            H_conv2 = conv_concat(H_conv2, y)
+
+            print('post shape', H_conv2.get_shape())
 
             # Third DeConv Layer
             output3_shape = [batch_size, int(width), s2, g_dim * 1]
@@ -152,6 +177,11 @@ class TripleGAN(object):
                                                    scope="g_bn3")
             H_conv3 = tf.nn.relu(H_conv3)
             # Dimensions of H_conv3 = batch_size x 4 x 248 x 64
+            print('trung to se what to concat H_conv3', H_conv3.get_shape())  
+            print('trung to se what to concat y', y.get_shape())  
+            H_conv3 = conv_concat(H_conv3, y)
+
+            print('post shape', H_conv3.get_shape())
 
             # Fourth DeConv Layer
             output4_shape = [batch_size, int(width), s, c_dim]
@@ -161,8 +191,14 @@ class TripleGAN(object):
             H_conv4 = tf.nn.conv2d_transpose(H_conv3, W_conv4, output_shape=output4_shape,
                                              strides=[1, 1, 2, 1], padding='VALID') + b_conv4
             #         H_conv4 = tf.nn.tanh(H_conv4)
+            # print('trung to se what to concat H_conv4', H_conv4.get_shape())  
+            # print('trung to se what to concat y', y.get_shape())  
+            # H_conv4 = conv_concat(H_conv4, y)
+
+            # print('post shape', H_conv4.get_shape())
 
             H_conv4 = tf.nn.softmax(H_conv4, axis=1, name="softmax_H_conv4")
+            print('final shape', H_conv4.get_shape())
             gene = tf.where(tf.equal(tf.reduce_max(H_conv4, axis=1, keep_dims=True), H_conv4),
                             tf.divide(H_conv4, tf.reduce_max(H_conv4, axis=1, keep_dims=True)),
                             tf.multiply(H_conv4, 0.))
@@ -193,6 +229,7 @@ class TripleGAN(object):
             l8 = tf.layers.dense(inputs=l7, units=45)
 
             logits = tf.layers.dense(inputs=l8, units=2)
+
 
         return logits
 
@@ -229,7 +266,7 @@ class TripleGAN(object):
         D_real, D_real_logits, _ = self.discriminator(self.inputs, self.y, is_training=True, reuse=False)
 
         # output of D for fake images
-        G_approx_gene, G_gene = self.generator(self.z, y_=None, is_training=True, reuse=False)
+        G_approx_gene, G_gene = self.generator(self.z, self.y, is_training=True, reuse=False)
         D_fake, D_fake_logits, _ = self.discriminator(G_gene, self.y, is_training=True, reuse=True)
 
         # output of C for real images
@@ -281,7 +318,7 @@ class TripleGAN(object):
 
         """" Testing """
         # for test
-        self.fake_sequences = self.generator(self.visual_z, y_ = None, is_training=False, reuse=True)
+        self.fake_sequences = self.generator(self.visual_z, self.visual_y, is_training=False, reuse=True)
 
         """ Summary """
         d_loss_real_sum = tf.summary.scalar("d_loss_real", d_loss_real)
@@ -347,7 +384,7 @@ class TripleGAN(object):
                 batch_sequences = self.data_X[idx * self.batch_size: (idx + 1) * self.batch_size]
                 batch_labels = self.data_y[idx * self.batch_size : (idx + 1) * self.batch_size]
                 batch_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
-
+                
                 feed_dict = {
                     self.inputs: batch_sequences,
                     self.y: batch_labels,
