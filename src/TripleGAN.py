@@ -2,6 +2,7 @@ import dna
 from ops import *
 from utils import *
 import time
+import numpy as np
 
 
 class TripleGAN(object):
@@ -69,15 +70,15 @@ class TripleGAN(object):
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
 
             x = conv_concat(x, y)
-            x = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
+            x = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], lrelu=True)
             x = max_pool_layer(name_scope="max_pool_1", input_tensor=x, pool_size=[1, 3])
 
             x = conv_concat(x, y)
-            x = conv_layer(name_scope="convolutional_2", input_tensor=x, num_kernels=30, kernel_shape=[1, 5])
+            x = conv_layer(name_scope="convolutional_2", input_tensor=x, num_kernels=30, kernel_shape=[1, 5], lrelu = True)
             x = max_pool_layer(name_scope="max_pool_2", input_tensor=x, pool_size=[1, 4])
 
             x = conv_concat(x, y)
-            x = conv_layer(name_scope="convolutional_3", input_tensor=x, num_kernels=40, kernel_shape=[1, 3])
+            x = conv_layer(name_scope="convolutional_3", input_tensor=x, num_kernels=40, kernel_shape=[1, 3], lrelu = True)
             x = max_pool_layer(name_scope="max_pool_3", input_tensor=x, pool_size=[1, 4])
 
             x = flatten(x)
@@ -119,13 +120,11 @@ class TripleGAN(object):
 
 
             h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
-            h0 = tf.nn.relu(h0)
+            h0 = tf.nn.leaky_relu(h0)
             # Dimensions of h0 = batch_size x 1 x 31 x magic_number
-            print('trung to se what to concat x', h0.get_shape())  
-            print('trung to se what to concat y', y.get_shape())  
             h0 = conv_concat(h0, y)
 
-            print('post shape', h0.get_shape())
+            
 
             # First DeConv Layer
 
@@ -140,15 +139,14 @@ class TripleGAN(object):
                                              strides=[1, 2, 2, 1], padding='SAME', name="H_conv1") + b_conv1
             H_conv1 = tf.contrib.layers.batch_norm(inputs=H_conv1, center=True, scale=True, is_training=True,
                                                    scope="g_bn1")
-            H_conv1 = tf.nn.relu(H_conv1)
+            H_conv1 = tf.nn.leaky_relu(H_conv1)
 
                  
             # Dimensions of H_conv1 = batch_size x 1 x 62 x 256
-            print('trung to se what to concat H_conv1', H_conv1.get_shape())  
-            print('trung to se what to concat y', y.get_shape())  
+
             H_conv1 = conv_concat(H_conv1, y)
 
-            print('post shape', H_conv1.get_shape())
+            
             # Second DeConv Layer
             output2_shape = [batch_size, int(width / 2), s4, g_dim * 2]
             W_conv2 = tf.get_variable('g_wconv2', [5, 5, output2_shape[-1], int(H_conv1.get_shape()[-1])],
@@ -158,13 +156,12 @@ class TripleGAN(object):
                                              strides=[1, 1, 2, 1], padding='SAME') + b_conv2
             H_conv2 = tf.contrib.layers.batch_norm(inputs=H_conv2, center=True, scale=True, is_training=True,
                                                    scope="g_bn2")
-            H_conv2 = tf.nn.relu(H_conv2)
+            H_conv2 = tf.nn.leaky_relu(H_conv2)
             # Dimensions of H_conv2 = batch_size x 2 x 124 x 128
-            print('trung to se what to concat H_conv2', H_conv2.get_shape())  
-            print('trung to se what to concat y', y.get_shape())  
+
             H_conv2 = conv_concat(H_conv2, y)
 
-            print('post shape', H_conv2.get_shape())
+            
 
             # Third DeConv Layer
             output3_shape = [batch_size, int(width), s2, g_dim * 1]
@@ -175,13 +172,11 @@ class TripleGAN(object):
                                              strides=[1, 2, 2, 1], padding='SAME') + b_conv3
             H_conv3 = tf.contrib.layers.batch_norm(inputs=H_conv3, center=True, scale=True, is_training=True,
                                                    scope="g_bn3")
-            H_conv3 = tf.nn.relu(H_conv3)
+            H_conv3 = tf.nn.leaky_relu(H_conv3)
             # Dimensions of H_conv3 = batch_size x 4 x 248 x 64
-            print('trung to se what to concat H_conv3', H_conv3.get_shape())  
-            print('trung to se what to concat y', y.get_shape())  
+
             H_conv3 = conv_concat(H_conv3, y)
 
-            print('post shape', H_conv3.get_shape())
 
             # Fourth DeConv Layer
             output4_shape = [batch_size, int(width), s, c_dim]
@@ -198,7 +193,8 @@ class TripleGAN(object):
             # print('post shape', H_conv4.get_shape())
 
             H_conv4 = tf.nn.softmax(H_conv4, axis=1, name="softmax_H_conv4")
-            print('final shape', H_conv4.get_shape())
+
+
             gene = tf.where(tf.equal(tf.reduce_max(H_conv4, axis=1, keep_dims=True), H_conv4),
                             tf.divide(H_conv4, tf.reduce_max(H_conv4, axis=1, keep_dims=True)),
                             tf.multiply(H_conv4, 0.))
@@ -212,7 +208,7 @@ class TripleGAN(object):
 
             # convolutional + pooling #1
             l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20,
-                                          kernel_shape=[4, 9], relu=True)
+                                          kernel_shape=[4, 9], lrelu=True)
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3])
 
             # convolutional + pooling #2
@@ -263,6 +259,8 @@ class TripleGAN(object):
         # A Game with Three Players
 
         # output of D for real images
+
+
         D_real, D_real_logits, _ = self.discriminator(self.inputs, self.y, is_training=True, reuse=False)
 
         # output of D for fake images
@@ -278,12 +276,20 @@ class TripleGAN(object):
         R_P = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=C_fake_logits))
 
         # get loss for discriminator
+
+
+        rand_vector = np.random.uniform(0,1,size = self.batch_size)
+        
+        # altering labels with a probability of threshold to confuse the discriminator
+        d_lab_real = self.alter_label(rand_vector, 'Real', 0.5)
+        d_lab_fake = self.alter_label(rand_vector, 'Fake', 0.5)
+
         d_loss_real = tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_real_logits,
-                                                              labels=tf.ones(self.batch_size, dtype=tf.int32)))
+                                                              labels=d_lab_real))
         d_loss_fake = tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_fake_logits,
-                                                              labels=tf.zeros(self.batch_size, dtype=tf.int32)))
+                                                              labels=d_lab_fake))
         self.d_loss = d_loss_real + d_loss_fake
 
         # get loss for generator
@@ -297,7 +303,7 @@ class TripleGAN(object):
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         # get loss for classifier
-        self.c_loss = R_L + R_P
+        self.c_loss = R_L 
 
         """ Training """
 
@@ -309,13 +315,29 @@ class TripleGAN(object):
 
         # optimizers
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
-                                                                                               var_list=d_vars)
-            self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
-                                                                                               var_list=g_vars)
-            self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.beta1, beta2=self.beta2,
-                                                  epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
+            # self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
+            #                                                                                    var_list=d_vars)
+            # self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
+            #                                                                                    var_list=g_vars)
+            # self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.beta1, beta2=self.beta2,
+            #                                       epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
 
+
+
+            d_grad_var = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).compute_gradients(self.d_loss,
+                                                                                               var_list=d_vars)
+            # print(d_grad_var)
+            self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).apply_gradients(d_grad_var)
+
+            g_grad_var = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).compute_gradients(self.g_loss,
+                                                                                               var_list=g_vars)
+            # print(g_grad_var)
+            self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).apply_gradients(g_grad_var)
+
+            c_grad_var = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.GAN_beta1).compute_gradients(self.c_loss,
+                                                                                               var_list=c_vars)
+            # print(c_grad_var)
+            self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.GAN_beta1).apply_gradients(c_grad_var)
         """" Testing """
         # for test
         self.fake_sequences = self.generator(self.visual_z, self.visual_y, is_training=False, reuse=True)
@@ -342,7 +364,19 @@ class TripleGAN(object):
         lr_c = self.lr_c
 
         # graph inputs for visualize training results
-        visual_sample_z = np.random.uniform(-1, 1, size=(self.generated_batch_size, self.z_dim))
+        visual_sample_z = np.random.normal(-1, 1, size=(self.generated_batch_size, self.z_dim)) ## normal might be better
+        
+        # this is to create the labels for the samples to be generated for Barbara. can be made better/wrapped into a function
+        pos_labels = np.ones((int(self.generated_batch_size/2), 1), dtype=int)
+        neg_labels = np.zeros((int(self.generated_batch_size/2), 1), dtype=int)
+        gen_labels = np.concatenate([pos_labels, neg_labels])
+        gen_labels = gen_labels.transpose()
+
+        visual_sample_y = np.zeros((len(gen_labels), 2), dtype=np.float)
+        for i, label in enumerate(gen_labels):
+            visual_sample_y[i, gen_labels[i]] = 1.0
+
+
 
         # saver to save model
         self.saver = tf.train.Saver()
@@ -383,7 +417,7 @@ class TripleGAN(object):
             for idx in range(start_batch_id, self.num_batches):
                 batch_sequences = self.data_X[idx * self.batch_size: (idx + 1) * self.batch_size]
                 batch_labels = self.data_y[idx * self.batch_size : (idx + 1) * self.batch_size]
-                batch_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
+                batch_z = np.random.normal(-1, 1, size=(self.batch_size, self.z_dim))
                 
                 feed_dict = {
                     self.inputs: batch_sequences,
@@ -392,9 +426,10 @@ class TripleGAN(object):
                     self.tf_lr_d: lr_d, self.tf_lr_g: lr_g,
                     self.tf_lr_c: lr_c,
                 }
-                # update D network
-                _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
-                self.writer.add_summary(summary_str, counter)
+                # update D network only after 10 epochs
+                if  epoch % 5 == 0:
+                    _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
+                    self.writer.add_summary(summary_str, counter)
 
                 # update G network
                 _, summary_str_g, g_loss = self.sess.run([self.g_optim, self.g_sum, self.g_loss], feed_dict=feed_dict)
@@ -411,7 +446,7 @@ class TripleGAN(object):
 
             """ Save generated samples to a file"""
             if epoch != 0 and epoch % 10 == 0:
-                self.generate_and_save_samples(visual_sample_z=visual_sample_z, epoch=epoch);
+                self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y = visual_sample_y,  epoch=epoch);
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)
@@ -430,11 +465,14 @@ class TripleGAN(object):
             # save model for final step
         self.save(self.checkpoint_dir, counter)
 
-    def generate_and_save_samples(self, visual_sample_z, epoch):
+    def generate_and_save_samples(self, visual_sample_z, visual_sample_y, epoch):
         saving_start_time = time.time()
+
         # save some (15) generated sequences for every epoch
+
+        
         _, samples = self.sess.run(self.fake_sequences,
-                                feed_dict={self.visual_z: visual_sample_z})
+                                feed_dict={self.visual_z: visual_sample_z, self.visual_y: visual_sample_y})
         one_hot_decoded = self.one_hot_decode(samples)
         save_sequences(one_hot_decoded,
                        self.get_files_location('_generated_sequences_epoch_{:03d}.txt'.format(
@@ -539,3 +577,21 @@ class TripleGAN(object):
         else:
             print(" [*] Failed to find a checkpoint")
             return False, 0
+
+
+
+
+
+    def alter_label(self, random_vector, realorfake, threshold):
+
+
+        if(realorfake=='Real'):
+            labels = np.where(random_vector <=threshold, 0, 1)
+        elif(realorfake =='Fake'):
+            labels = np.where(random_vector <=threshold, 1, 0)
+        return tf.convert_to_tensor(labels)
+
+
+
+
+
