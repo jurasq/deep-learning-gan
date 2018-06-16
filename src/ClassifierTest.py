@@ -153,7 +153,10 @@ class ClassifierTest(TripleGAN):
         start_time = time.time()
 
         for epoch in range(start_epoch, self.epoch):
-
+            indices = np.random.permutation(len(self.data_X))
+            self.data_X = self.data_X[indices]
+            self.data_y = self.data_y[indices]
+            
             # lr_d and lr_g are unimportant - this is only  concerned about classifier
             _, _, lr_c = self.update_learning_rates(epoch, lr_d=1, lr_g=1, lr_c=lr_c)
 
