@@ -310,34 +310,36 @@ class TripleGAN(object):
         # divide trainable variables into a group for D and a group for G
         t_vars = tf.trainable_variables()
         d_vars = [var for var in t_vars if 'discriminator' in var.name]
+        print(d_vars)
         g_vars = [var for var in t_vars if 'generator' in var.name]
+        print(g_vars)
         c_vars = [var for var in t_vars if 'classifier' in var.name]
 
         # optimizers
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            # self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
-            #                                                                                    var_list=d_vars)
-            # self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
-            #                                                                                    var_list=g_vars)
-            # self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.beta1, beta2=self.beta2,
-            #                                       epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
-
-
-
-            d_grad_var = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).compute_gradients(self.d_loss,
+            self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).minimize(self.d_loss,
                                                                                                var_list=d_vars)
-            # print(d_grad_var)
-            self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).apply_gradients(d_grad_var)
-
-            g_grad_var = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).compute_gradients(self.g_loss,
+            self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).minimize(self.g_loss,
                                                                                                var_list=g_vars)
-            # print(g_grad_var)
-            self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).apply_gradients(g_grad_var)
+            self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.beta1, beta2=self.beta2,
+                                                  epsilon=self.epsilon).minimize(self.c_loss, var_list=c_vars)
 
-            c_grad_var = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.GAN_beta1).compute_gradients(self.c_loss,
-                                                                                               var_list=c_vars)
-            # print(c_grad_var)
-            self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.GAN_beta1).apply_gradients(c_grad_var)
+
+
+            # d_grad_var = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).compute_gradients(self.d_loss,
+            #                                                                                    var_list=d_vars)
+            # # print(d_grad_var)
+            # self.d_optim = tf.train.AdamOptimizer(self.tf_lr_d, beta1=self.GAN_beta1).apply_gradients(d_grad_var)
+
+            # g_grad_var = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).compute_gradients(self.g_loss,
+            #                                                                                    var_list=g_vars)
+            # # print(g_grad_var)
+            # self.g_optim = tf.train.AdamOptimizer(self.tf_lr_g, beta1=self.GAN_beta1).apply_gradients(g_grad_var)
+
+            # c_grad_var = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.GAN_beta1).compute_gradients(self.c_loss,
+            #                                                                                    var_list=c_vars)
+            # # print(c_grad_var)
+            # self.c_optim = tf.train.AdamOptimizer(self.tf_lr_c, beta1=self.GAN_beta1).apply_gradients(c_grad_var)
         """" Testing """
         # for test
         self.fake_sequences = self.generator(self.visual_z, self.visual_y, is_training=False, reuse=True)
@@ -367,16 +369,16 @@ class TripleGAN(object):
         visual_sample_z = np.random.normal(-1, 1, size=(self.generated_batch_size, self.z_dim)) ## normal might be better
         
         # this is to create the labels for the samples to be generated for Barbara. can be made better/wrapped into a function
-        pos_labels = np.ones((int(self.generated_batch_size/2), 1), dtype=int)
-        neg_labels = np.zeros((int(self.generated_batch_size/2), 1), dtype=int)
-        gen_labels = np.concatenate([pos_labels, neg_labels])
+        pos_labels = np.ones((int(self.generated_batch_size), 1), dtype=int)
+        neg_labels = np.zeros((int(self.generated_batch_size), 1), dtype=int)
+        # gen_labels = np.concatenate([pos_labels, neg_labels])
         # gen_labels = gen_labels.transpose()
+        
+        pos_labels_hot = self.one_hot_encode_labels(pos_labels)
+        neg_labels_hot = self.one_hot_encode_labels(neg_labels)
 
-        visual_sample_y = np.zeros((len(gen_labels), 2), dtype=np.float)
-        for i, label in enumerate(gen_labels):
-            visual_sample_y[i, gen_labels[i]] = 1.0
 
-        print(visual_sample_y.shape)
+        
 
         # saver to save model
         self.saver = tf.train.Saver()
@@ -445,8 +447,8 @@ class TripleGAN(object):
 
 
             """ Save generated samples to a file"""
-            if  epoch!= 0 and epoch % 10 == 0:
-                self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y = visual_sample_y,  epoch=epoch);
+            # if  epoch!= 0 and epoch % 10 == 0:
+            self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y_pos = pos_labels_hot, visual_sample_y_neg = neg_labels_hot,  epoch=epoch);
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)
@@ -465,17 +467,26 @@ class TripleGAN(object):
             # save model for final step
         self.save(self.checkpoint_dir, counter)
 
-    def generate_and_save_samples(self, visual_sample_z, visual_sample_y, epoch):
+    def generate_and_save_samples(self, visual_sample_z, visual_sample_y_pos,visual_sample_y_neg, epoch):
         saving_start_time = time.time()
 
         # save some (15) generated sequences for every epoch
 
         
-        _, samples = self.sess.run(self.fake_sequences,
-                                feed_dict={self.visual_z: visual_sample_z, self.visual_y: visual_sample_y})
-        one_hot_decoded = self.one_hot_decode(samples)
-        save_sequences(one_hot_decoded,
-                       self.get_files_location('_generated_sequences_epoch_{:03d}.txt'.format(
+        _, pos_samples = self.sess.run(self.fake_sequences,
+                                feed_dict={self.visual_z: visual_sample_z, self.visual_y: visual_sample_y_pos})
+        one_hot_decoded_pos = self.one_hot_decode(pos_samples)
+        # print(type(one_hot_decoded))
+        save_sequences(one_hot_decoded_pos,
+                       self.get_files_location('_generated_pos_sequences_epoch_{:03d}.txt'.format(
+                           epoch)))
+        _, neg_samples = self.sess.run(self.fake_sequences,
+                                feed_dict={self.visual_z: visual_sample_z, self.visual_y: visual_sample_y_neg})
+
+        one_hot_decoded_neg = self.one_hot_decode(neg_samples)
+        # print(type(one_hot_decoded))
+        save_sequences(one_hot_decoded_neg,
+                       self.get_files_location('_generated_neg_sequences_epoch_{:03d}.txt'.format(
                            epoch)))
         saving_end_time = time.time()
         print("Saved %d generated samples to file, took %4.4f" % (
@@ -593,5 +604,12 @@ class TripleGAN(object):
 
 
 
+    def one_hot_encode_labels(self, labels):
+
+        visual_sample_y = np.zeros((len(labels), 2), dtype=np.float)
+        for i, label in enumerate(labels):
+            visual_sample_y[i, labels[i]] = 1.0
+
+        return visual_sample_y
 
 
