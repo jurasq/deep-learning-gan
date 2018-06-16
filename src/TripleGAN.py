@@ -454,7 +454,7 @@ class TripleGAN(object):
             self.test_and_save_accuracy(epoch=epoch)
 
             """ Save learning rates to a file in case we wanted to resume later"""
-            self.save_learning_rates(lr_d, lr_g)
+            self.save_learning_rates(lr_d, lr_g, lr_c)
 
             # After an epoch, start_batch_id is set to zero
             # non-zero value is only for the first epoch after loading pre-trained model
