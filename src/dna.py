@@ -53,7 +53,7 @@ def load_dna_data(num_train, num_test, base_folder, species, samples_to_use, tes
     if samples_to_use not in ["neg", "pos", "both"]:
         raise ValueError("Samples must have values: \"neg\" (only neg), \"both\" (neg-pos) or \"pos\" (only pos). \n")
 
-    if num_train + num_test > 14000:
+    if num_train + num_test/2 > 14000:
         raise ValueError(
             "We only have 14000 samples per species, so the sum of training and test samples cannot exceed 14000. \n")
 
