@@ -288,9 +288,9 @@ class TripleGAN(object) :
         self.c_loss = R_L + self.alpha_p*R_P
 
         # test AUC on full dataset
-        #test_logits_full = self.classifier(self.full_test_dataset, is_training=False, reuse=True)
-        #softmax_logits_full = tf.nn.softmax(test_logits_full, axis=1)
-        #self.auc_on_test_set = tf.metrics.auc(predictions=softmax_logits_full, labels=self.full_test_dataset_labels)
+        test_logits_full = self.classifier(self.full_test_dataset, is_training=False, reuse=True)
+        softmax_logits_full = tf.nn.softmax(test_logits_full, axis=1)
+        self.auc_on_test_set = tf.metrics.auc(predictions=softmax_logits_full, labels=self.full_test_dataset_labels)
 
         """ Training """
 
@@ -326,9 +326,10 @@ class TripleGAN(object) :
 
 
     def train(self):
-
         # initialize all variables
         tf.global_variables_initializer().run()
+        tf.local_variables_initializer().run()
+        
         gan_lr = self.learning_rate
         cla_lr = self.cla_learning_rate
 
@@ -500,13 +501,13 @@ class TripleGAN(object) :
             test_acc += acc_
         test_acc /= int(self.test_set_size/self.test_batch_size)
 
-        #if self.auc_on_test_set:
-        #    auc = self.sess.run(self.auc_on_test_set, feed_dict={
-        #        self.full_test_dataset: self.test_X,
-        #        self.full_test_dataset_labels: self.test_y
-        #    })
-        #    print("AUC")
-        #    print(auc)
+        if self.auc_on_test_set:
+            auc = self.sess.run(self.auc_on_test_set, feed_dict={
+                self.full_test_dataset: self.test_X,
+                self.full_test_dataset_labels: self.test_y
+            })
+            print("AUC")
+            print(auc)
 
         summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
         self.writer.add_summary(summary_test, epoch)
