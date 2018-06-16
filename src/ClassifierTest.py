@@ -209,7 +209,7 @@ def main():
     # open session
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         clf = ClassifierTest(sess, epoch=400, batch_size=100, unlabel_batch_size=-1,
-                             z_dim=-1, dataset_name="dna", nexamples=12000, lr_d=-1, lr_g=-1, lr_c=0.001,
+                             z_dim=-1, dataset_name="dna", nexamples=12000, lr_d=-1, lr_g=-1, lr_c=2e-5,
                              checkpoint_dir='checkpoint', result_dir='result', log_dir='logs')
 
         # build graph
