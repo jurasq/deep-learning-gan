@@ -239,14 +239,17 @@ class TripleGAN(object):
 
 
         """ Graph Input """
-        # Train sequences, shape: [batch_size, 4, 500, 1]
+        # Train sequences + labels, shape: [batch_size, 4, 500, 1], [batch_size, 2]
         self.inputs = tf.placeholder(tf.float32, [self.batch_size] + input_dims, name='real_sequences')
-        # Test sequences, shape: [test_batch_size, 4, 500, 1]
-        self.test_inputs = tf.placeholder(tf.float32, [self.test_batch_size] + input_dims, name='test_sequences')
-
-        # Test labels, shape: [test_batch_size, 2], one hot encoded
         self.y = tf.placeholder(tf.float32, [self.batch_size, self.y_dim], name='y')
+
+        # Batch test sequences + labels, shape: [test_batch_size, 4, 500, 1], [test_batch_size, 2]
+        self.test_inputs = tf.placeholder(tf.float32, [self.test_batch_size] + input_dims, name='test_sequences')
         self.test_label = tf.placeholder(tf.float32, [self.test_batch_size, self.y_dim], name='test_label')
+
+        # Full test sequences + labels, shape: [test_set_size, 4, 500, 1], [test_set_size, 2], one hot encoded
+        self.full_test_dataset = tf.placeholder(tf.float32, [self.test_set_size] + input_dims, name="all_test_sequences")
+        self.full_test_dataset_labels = tf.placeholder(tf.float32, [self.test_set_size, self.y_dim], name="all_test_label")
 
         # Labels for the generated sequences - this is not really needed
         self.visual_y = tf.placeholder(tf.float32, [self.generated_batch_size, self.y_dim], name='visual_y')
@@ -287,14 +290,17 @@ class TripleGAN(object):
             tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_fake_logits,
                                                            labels=tf.ones(self.batch_size, dtype=tf.int32)))
 
-        # test loss for classify
+        # test loss for classification on batch of test set
         self.test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
         true_labels = tf.argmax(self.test_label, 1)
-
         predictions = tf.argmax(self.test_logits, 1)
         correct_prediction = tf.equal(predictions, true_labels)
-        self.auc_test = tf.metrics.auc(predictions=predictions, labels=true_labels)
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+        # test AUC on full dataset
+        test_logits_full = self.classifier(self.full_test_dataset, is_training=False, reuse=True)
+        softmax_logits_full = tf.nn.softmax(test_logits_full, axis=1)
+        self.auc_on_test_set = tf.metrics.auc(predictions=softmax_logits_full, labels=self.full_test_dataset_labels)
 
         # get loss for classifier
         self.c_loss = R_L + R_P
@@ -466,6 +472,14 @@ class TripleGAN(object):
 
             test_acc += acc_
         test_acc /= int(self.test_set_size/self.test_batch_size)
+
+        if self.auc_on_test_set:
+            auc = self.sess.run(self.auc_on_test_set, feed_dict={
+                self.full_test_dataset: self.test_X,
+                self.full_test_dataset_labels: self.test_y
+            })
+            print("AUC")
+            print(auc)
 
         summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
         self.writer.add_summary(summary_test, epoch)
