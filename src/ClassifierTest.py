@@ -3,7 +3,7 @@ from TripleGAN import TripleGAN
 from utils import *
 import time
 
-
+DEBUG_MODE = False
 class ClassifierTest(TripleGAN):
     def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
                  nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir):
@@ -73,12 +73,12 @@ class ClassifierTest(TripleGAN):
 
         """ Loss Function """
         # output of C for real images
-        c_real_logits = self.classifier(self.inputs, is_training=True, reuse=False)
-        correct_prediction_train = tf.equal(tf.argmax(c_real_logits, 1), tf.argmax(self.y, 1))
+        self.c_real_logits = self.classifier(self.inputs, is_training=True, reuse=False)
+        correct_prediction_train = tf.equal(tf.argmax(self.c_real_logits, 1), tf.argmax(self.y, 1))
         self.train_accuracy = tf.reduce_mean(tf.cast(correct_prediction_train, tf.float32))
 
         c_loss_real = tf.reduce_mean(
-            tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=c_real_logits))
+            tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=self.c_real_logits))
 
         # test loss for classify
         test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
@@ -157,6 +157,9 @@ class ClassifierTest(TripleGAN):
                 _, summary_str_c, c_loss, train_acc = self.sess.run([self.c_optim, self.c_sum, self.c_loss, self.train_accuracy], feed_dict=feed_dict)
                 self.writer.add_summary(summary_str_c, counter)
 
+                if DEBUG_MODE:
+                    self.run_debug_statements(feed_dict)
+
                 # display training status
                 counter += 1
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, c_loss: %.8f, train_acc %.2f"
@@ -184,6 +187,18 @@ class ClassifierTest(TripleGAN):
         return "{}_{}_{}".format(
             self.model_name, self.dataset_name,
             self.batch_size)
+
+    def run_debug_statements(self, feed_dict):
+        logits_r, argmax_logits, argmax_labels = self.sess.run([self.c_real_logits, tf.argmax(self.c_real_logits, 1), tf.argmax(self.y, 1)],
+                                                           feed_dict=feed_dict)
+        print("Logits for real examples:")
+        print(logits_r)
+        print("Argmax logits")
+        print(argmax_logits)
+        print("Argmax true labels")
+        print(argmax_labels)
+        print("True labels sum")
+        print(sum(argmax_labels))
 
 def main():
     # open session

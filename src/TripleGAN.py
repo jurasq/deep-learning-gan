@@ -213,11 +213,11 @@ class TripleGAN(object):
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3])
 
             # convolutional + pooling #2
-            l3 = conv_max_forward_reverse(name_scope="conv2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5])
+            l3 = conv_layer(name_scope="conv2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5])
             l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[1, 4])
 
             # convolutional + pooling #3
-            l5 = conv_max_forward_reverse(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 3])
+            l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 3])
             l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4])
 
             flat = flatten(l6)
