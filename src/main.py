@@ -11,7 +11,7 @@ def parse_args():
     desc = "Tensorflow implementation of TripleGAN"
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('--n', type=int, default=4000, help='The number of dataset')
-    parser.add_argument('--dataset', type=str, default='cifar10', choices=['mnist', 'dna', 'fashion-mnist', 'celebA', 'cifar10'],
+    parser.add_argument('--dataset', type=str, default='dna', choices=['mnist', 'dna', 'fashion-mnist', 'celebA', 'cifar10'],
                         help='The name of dataset')
     # In now, only cifar 10...
     parser.add_argument('--epoch', type=int, default=1000, help='The number of epochs to run')
