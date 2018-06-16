@@ -3,7 +3,7 @@ from TripleGAN import TripleGAN
 from utils import *
 import time
 
-DEBUG_MODE = False
+DEBUG_MODE = True
 class ClassifierTest(TripleGAN):
     def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
                  nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir):
@@ -81,8 +81,8 @@ class ClassifierTest(TripleGAN):
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=self.c_real_logits))
 
         # test loss for classify
-        test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
-        correct_prediction = tf.equal(tf.argmax(test_logits, 1), tf.argmax(self.test_label, 1))
+        self.test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
+        correct_prediction = tf.equal(tf.argmax(self.test_logits, 1), tf.argmax(self.test_label, 1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         # get loss for classifier
@@ -157,8 +157,8 @@ class ClassifierTest(TripleGAN):
                 _, summary_str_c, c_loss, train_acc = self.sess.run([self.c_optim, self.c_sum, self.c_loss, self.train_accuracy], feed_dict=feed_dict)
                 self.writer.add_summary(summary_str_c, counter)
 
-                if DEBUG_MODE:
-                    self.run_debug_statements(feed_dict)
+                if 0:
+                    self.run_debug_statements(feed_dict,1)
 
                 # display training status
                 counter += 1
@@ -166,7 +166,39 @@ class ClassifierTest(TripleGAN):
                       % (epoch, idx, self.num_batches, time.time() - start_time, c_loss, train_acc))
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
-            self.test_and_save_accuracy(epoch=epoch)
+            #self.test_and_save_accuracy(epoch=epoch)
+
+            test_acc = 0.0
+
+            print("==== Accuracy for batches: (first half are positive (enhancers), last half are negative (non-enhancers)) ====")
+            for idx in range(int(self.test_set_size/self.test_batch_size)):
+                test_batch_x = self.test_X[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
+                test_batch_y = self.test_y[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
+
+                feed_dict={
+                    self.test_inputs: test_batch_x,
+                    self.test_label: test_batch_y
+                }
+                acc_ = self.sess.run(self.accuracy, feed_dict={
+                    self.test_inputs: test_batch_x,
+                    self.test_label: test_batch_y
+                })
+                if 1:
+                    self.run_debug_statements(feed_dict,0)
+                print("Batch #%2d: %f" % (idx+1, acc_))
+
+                test_acc += acc_
+            test_acc /= int(self.test_set_size/self.test_batch_size)
+
+            summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
+            self.writer.add_summary(summary_test, epoch)
+
+            line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
+            print(line)
+            with open(self.get_files_location('accuracy.txt'), 'a') as f:
+                f.write(line)
+
+            
 
             """ Save learning rates to a file in case we wanted to resume later"""
             self.save_learning_rates(1, 1, lr_c)
@@ -188,17 +220,30 @@ class ClassifierTest(TripleGAN):
             self.model_name, self.dataset_name,
             self.batch_size)
 
-    def run_debug_statements(self, feed_dict):
-        logits_r, argmax_logits, argmax_labels = self.sess.run([self.c_real_logits, tf.argmax(self.c_real_logits, 1), tf.argmax(self.y, 1)],
-                                                           feed_dict=feed_dict)
-        print("Logits for real examples:")
-        print(logits_r)
-        print("Argmax logits")
-        print(argmax_logits)
-        print("Argmax true labels")
-        print(argmax_labels)
-        print("True labels sum")
-        print(sum(argmax_labels))
+    def run_debug_statements(self, feed_dict, isTrain):
+        if isTrain:
+            logits_r, argmax_logits, argmax_labels = self.sess.run([self.c_real_logits, tf.argmax(self.c_real_logits, 1), tf.argmax(self.y, 1)],
+                                                               feed_dict=feed_dict)
+            #print("Logits for real examples:")
+            #print(logits_r)
+            print("Argmax logits")
+            print(argmax_logits)
+            print("Argmax true labels")
+            print(argmax_labels)
+            print("True labels sum")
+            print(sum(argmax_labels))
+        else: 
+            Tx, Ty, argmax_logits, argmax_labels = self.sess.run([self.test_logits, self.test_label, tf.argmax(self.test_logits, 1), tf.argmax(self.test_label, 1)],
+                                                               feed_dict=feed_dict)
+            #print("PredLabels:")
+            #print(Tx)
+            #print("TrueLabels")
+            #print(Ty)
+            print("Argmax PredLabels")
+            print(argmax_logits)
+            print("Argmax true labels")
+            print(argmax_labels)
+            
 
 def main():
     # open session
