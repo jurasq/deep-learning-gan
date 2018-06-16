@@ -207,23 +207,23 @@ class TripleGAN(object):
             # convolutional + pooling #1
             l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20,
                                           kernel_shape=[4, 9], relu=True)
-            l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[3, 1])
+            l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3], padding="VALID")
 
             # convolutional + pooling #2
             l3 = conv_layer(name_scope="conv2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5])
-            l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[4, 1])
+            l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[1, 4], padding="VALID")
 
             # convolutional + pooling #3
             l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 3])
-            l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[4, 1])
+            l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4], padding="VALID")
 
             flat = flatten(l6)
             # fully connected layers
             l7 = tf.layers.dense(inputs=flat, units=90)
             l7 = tf.nn.relu(l7)
+            l7 = tf.layers.dropout(l7, rate=0.15, training=is_training)
             l8 = tf.layers.dense(inputs=l7, units=45)
             l8 = tf.nn.relu(l8)
-            l8 = tf.layers.dropout(l8, rate=0.2, training=is_training)
             logits = tf.layers.dense(inputs=l8, units=2)
 
 
