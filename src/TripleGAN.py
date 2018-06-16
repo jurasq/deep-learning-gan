@@ -96,9 +96,6 @@ class TripleGAN(object):
             noise_vector = concat([noise_vector, y_])
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
             
-            
-
-
             batch_size = tf.cast(noise_vector.shape[0], dtype=tf.int32)
             g_dim = 64  # Number of filters of first layer of generator
             c_dim = 1  # dimensionality of the output
@@ -119,7 +116,7 @@ class TripleGAN(object):
 
 
             h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
-            h0 = tf.nn.relu(h0)
+            h0 = tf.nn.leaky_relu(h0)
             # Dimensions of h0 = batch_size x 1 x 31 x magic_number
             print('trung to se what to concat x', h0.get_shape())  
             print('trung to se what to concat y', y.get_shape())  
@@ -138,9 +135,9 @@ class TripleGAN(object):
 
             H_conv1 = tf.nn.conv2d_transpose(value=h0, filter=W_conv1, output_shape=output1_shape,
                                              strides=[1, 2, 2, 1], padding='SAME', name="H_conv1") + b_conv1
-            H_conv1 = tf.contrib.layers.batch_norm(inputs=H_conv1, center=True, scale=True, is_training=True,
+            H_conv1 = tf.contrib.layers.batch_norm(inputs=H_conv1, center=True, scale=True, is_training=is_training,
                                                    scope="g_bn1")
-            H_conv1 = tf.nn.relu(H_conv1)
+            H_conv1 = tf.nn.leaky_relu(H_conv1)
 
                  
             # Dimensions of H_conv1 = batch_size x 1 x 62 x 256
@@ -175,7 +172,7 @@ class TripleGAN(object):
                                              strides=[1, 2, 2, 1], padding='SAME') + b_conv3
             H_conv3 = tf.contrib.layers.batch_norm(inputs=H_conv3, center=True, scale=True, is_training=True,
                                                    scope="g_bn3")
-            H_conv3 = tf.nn.relu(H_conv3)
+            H_conv3 = tf.nn.leaky_relu(H_conv3)
             # Dimensions of H_conv3 = batch_size x 4 x 248 x 64
             print('trung to se what to concat H_conv3', H_conv3.get_shape())  
             print('trung to se what to concat y', y.get_shape())  
@@ -417,7 +414,7 @@ class TripleGAN(object):
             self.test_and_save_accuracy(epoch=epoch)
 
             """ Save learning rates to a file in case we wanted to resume later"""
-            self.save_learning_rates(lr_d, lr_g)
+            self.save_learning_rates(lr_d, lr_g, lr_c)
 
             # After an epoch, start_batch_id is set to zero
             # non-zero value is only for the first epoch after loading pre-trained model
