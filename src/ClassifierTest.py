@@ -36,7 +36,7 @@ class ClassifierTest(TripleGAN):
             # in the Kingma and Ba paper (in the formula just before Section 2.1),
             # not the epsilon in Algorithm 1 of the paper.
             self.epsilon = 1e-8
-            self.decay_epoch = 100  # Point in epoch we start adding decay. if epoch >= decay_epoch, add decay. Note decay is hard coded.
+            self.decay_epoch = 10  # Point in epoch we start adding decay. if epoch >= decay_epoch, add decay. Note decay is hard coded.
             self.len_discrete_code = 4  # Think this is one-hot encoding for visualization ?
 
             self.data_X, self.data_y, self.test_X, self.test_y = self.init_data(nexamples)
