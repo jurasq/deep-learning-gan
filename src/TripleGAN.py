@@ -224,7 +224,7 @@ class TripleGAN(object):
             l8 = tf.layers.dense(inputs=l7, units=45)
             l8 = tf.nn.relu(l8)
             if is_training:
-                l8 = tf.nn.dropout(l8, keep_prob=0.85)
+                l8 = tf.nn.dropout(l8, keep_prob=0.6)
             logits = tf.layers.dense(inputs=l8, units=2)
 
 
