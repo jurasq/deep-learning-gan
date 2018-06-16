@@ -81,7 +81,7 @@ class ClassifierTest(TripleGAN):
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=self.c_real_logits))
 
         # test loss for classify
-        self.test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
+        self.test_logits = self.classifier(self.test_inputs, is_training=False, reuse=False)
         true_labels = tf.argmax(self.test_label, 1)
         predictions = tf.argmax(self.test_logits, 1)
         correct_prediction = tf.equal(predictions, true_labels)
