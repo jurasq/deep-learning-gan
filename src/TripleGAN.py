@@ -329,7 +329,7 @@ class TripleGAN(object) :
         # initialize all variables
         tf.global_variables_initializer().run()
         tf.local_variables_initializer().run()
-        
+
         gan_lr = self.learning_rate
         cla_lr = self.cla_learning_rate
 
@@ -512,7 +512,7 @@ class TripleGAN(object) :
         summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
         self.writer.add_summary(summary_test, epoch)
 
-        line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
+        line = "Epoch: [%2d], test_acc: %.4f, AUC: (%.4f, %.4f)\n" % (epoch, test_acc, auc[0], auc[1])
         print(line)
         with open(self.get_files_location('accuracy.txt'), 'a') as f:
             f.write(line)
