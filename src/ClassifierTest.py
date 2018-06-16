@@ -15,7 +15,7 @@ class ClassifierTest(TripleGAN):
         self.epoch = epoch
         self.batch_size = batch_size
         self.test_set_size = 1000
-        self.test_batch_size = 100
+        self.test_batch_size = 200
         self.model_name = "Classifier"  # name for checkpoint
 
         if self.dataset_name == 'dna':
@@ -81,8 +81,10 @@ class ClassifierTest(TripleGAN):
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=self.c_real_logits))
 
         # test loss for classify
-        test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
-        correct_prediction = tf.equal(tf.argmax(test_logits, 1), tf.argmax(self.test_label, 1))
+        self.test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
+        true_labels = tf.argmax(self.test_label, 1)
+        predictions = tf.argmax(self.test_logits, 1)
+        correct_prediction = tf.equal(predictions, true_labels)
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         # get loss for classifier
@@ -109,6 +111,7 @@ class ClassifierTest(TripleGAN):
     def train(self):
         # initialize all variables
         tf.global_variables_initializer().run()
+
         lr_c = self.lr_c
 
         # saver to save model
@@ -152,9 +155,11 @@ class ClassifierTest(TripleGAN):
                     self.inputs: batch_sequences,
                     self.y: batch_labels,
                     self.tf_lr_c: lr_c,
+                    self.test_inputs: np.concatenate([self.test_X[0:100], self.test_X[900:1000]]),
+                    self.test_label: np.concatenate([self.test_y[0:100], self.test_y[900:1000]])
                 }
 
-                _, summary_str_c, c_loss, train_acc = self.sess.run([self.c_optim, self.c_sum, self.c_loss, self.train_accuracy], feed_dict=feed_dict)
+                _, summary_str_c, c_loss, train_acc, test_acc = self.sess.run([self.c_optim, self.c_sum, self.c_loss, self.train_accuracy, self.accuracy], feed_dict=feed_dict)
                 self.writer.add_summary(summary_str_c, counter)
 
                 if DEBUG_MODE:
@@ -162,8 +167,8 @@ class ClassifierTest(TripleGAN):
 
                 # display training status
                 counter += 1
-                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, c_loss: %.8f, train_acc %.2f"
-                      % (epoch, idx, self.num_batches, time.time() - start_time, c_loss, train_acc))
+                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, c_loss: %.8f, train_acc %.2f, test_acc: %.2f"
+                      % (epoch, idx, self.num_batches, time.time() - start_time, c_loss, train_acc, test_acc))
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)
@@ -204,7 +209,7 @@ def main():
     # open session
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         clf = ClassifierTest(sess, epoch=400, batch_size=100, unlabel_batch_size=-1,
-                             z_dim=-1, dataset_name="dna", nexamples=12000, lr_d=-1, lr_g=-1, lr_c=2e-5,
+                             z_dim=-1, dataset_name="dna", nexamples=12000, lr_d=-1, lr_g=-1, lr_c=0.001,
                              checkpoint_dir='checkpoint', result_dir='result', log_dir='logs')
 
         # build graph

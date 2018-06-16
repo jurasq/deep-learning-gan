@@ -204,9 +204,6 @@ class TripleGAN(object):
 
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
-            if (reuse):
-                tf.get_variable_scope().reuse_variables()
-
             # convolutional + pooling #1
             l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20,
                                           kernel_shape=[4, 9], relu=True)
@@ -223,8 +220,11 @@ class TripleGAN(object):
             flat = flatten(l6)
             # fully connected layers
             l7 = tf.layers.dense(inputs=flat, units=90)
+            l7 = tf.nn.relu(l7)
             l8 = tf.layers.dense(inputs=l7, units=45)
-
+            l8 = tf.nn.relu(l8)
+            if is_training:
+                l8 = tf.nn.dropout(l8, keep_prob=0.9)
             logits = tf.layers.dense(inputs=l8, units=2)
 
 
@@ -289,8 +289,12 @@ class TripleGAN(object):
                                                            labels=tf.ones(self.batch_size, dtype=tf.int32)))
 
         # test loss for classify
-        test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
-        correct_prediction = tf.equal(tf.argmax(test_logits, 1), tf.argmax(self.test_label, 1))
+        self.test_logits = self.classifier(self.test_inputs, is_training=False, reuse=True)
+        true_labels = tf.argmax(self.test_label, 1)
+
+        predictions = tf.argmax(self.test_logits, 1)
+        correct_prediction = tf.equal(predictions, true_labels)
+        self.auc_test = tf.metrics.auc(predictions=predictions, labels=true_labels)
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         # get loss for classifier
@@ -455,7 +459,6 @@ class TripleGAN(object):
         for idx in range(int(self.test_set_size/self.test_batch_size)):
             test_batch_x = self.test_X[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
             test_batch_y = self.test_y[idx * self.test_batch_size: (idx + 1) * self.test_batch_size]
-
             acc_ = self.sess.run(self.accuracy, feed_dict={
                 self.test_inputs: test_batch_x,
                 self.test_label: test_batch_y
