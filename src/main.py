@@ -1,5 +1,4 @@
 from TripleGAN import TripleGAN
-from GAN import GAN
 
 from utils import show_all_variables
 from utils import check_folder
@@ -11,16 +10,16 @@ import argparse
 def parse_args():
     desc = "Tensorflow implementation of TripleGAN"
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('--n', type=int, default=1000, help='The number of samples from a dataset')
-    parser.add_argument('--dataset', type=str, default='dna', choices=['mnist', 'fashion-mnist', 'celebA', 'cifar10', 'dna'],
+    parser.add_argument('--n', type=int, default=4000, help='The number of dataset')
+    parser.add_argument('--dataset', type=str, default='cifar10', choices=['mnist', 'dna', 'fashion-mnist', 'celebA', 'cifar10'],
                         help='The name of dataset')
+    # In now, only cifar 10...
     parser.add_argument('--epoch', type=int, default=1000, help='The number of epochs to run')
     parser.add_argument('--batch_size', type=int, default=10, help='The size of batch')
     parser.add_argument('--unlabel_batch_size', type=int, default=250, help='The size of unlabel batch')
     parser.add_argument('--z_dim', type=int, default=200, help='Dimension of noise vector')
-    parser.add_argument('--lr_d', type=float, default=2e-7, help='learning rate of discriminator of GAN')
-    parser.add_argument('--lr_g', type=float, default=2e-2, help='learning rate of generator of GAN')
-    parser.add_argument('--lr_c', type=float, default=2e-7, help='learning rate of classifier of TripleGAN')
+    parser.add_argument('--gan_lr', type=float, default=2e-4, help='learning rate of GAN')
+    parser.add_argument('--cla_lr', type=float, default=2e-3, help='learning rate of Classify')
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoint',
                         help='Directory name to save the checkpoints')
     parser.add_argument('--result_dir', type=str, default='results',
@@ -71,8 +70,8 @@ def main():
     # open session
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         gan = TripleGAN(sess, epoch=args.epoch, batch_size=args.batch_size, unlabel_batch_size=args.unlabel_batch_size,
-                  z_dim=args.z_dim, dataset_name=args.dataset, nexamples=args.n, lr_d = args.lr_d, lr_g = args.lr_g, lr_c = args.lr_c,
-                  checkpoint_dir=args.checkpoint_dir, result_dir=args.result_dir, log_dir=args.log_dir)
+                        z_dim=args.z_dim, dataset_name=args.dataset, nexamples=args.n, gan_lr = args.gan_lr, cla_lr = args.cla_lr,
+                        checkpoint_dir=args.checkpoint_dir, result_dir=args.result_dir, log_dir=args.log_dir)
 
         # build graph
         gan.build_model()
