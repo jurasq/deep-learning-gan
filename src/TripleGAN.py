@@ -202,7 +202,7 @@ class TripleGAN(object):
             # Dimensions of H_conv4 = batch_size x 4 x 500 x 1
         return H_conv4, gene
 
-    def classifier(self, x, scope='classifier', is_training=True, reuse=False):
+    def classifier_old(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # convolutional + pooling #1
             l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20,
@@ -228,6 +228,28 @@ class TripleGAN(object):
 
 
         return logits
+
+    def classifier(self, x, scope="classifier", is_training=True, reuse=False):
+        with tf.variable_scope(scope, reuse=reuse):
+            # x = gaussian_noise_layer(x) # default = 0.15
+            x = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9], layer_name=scope + '_conv1'))
+            x = max_pooling_original(x, kernel=[1, 3], stride=1)
+
+            x = lrelu(conv_layer_original(x, filter_size=30, kernel=[1, 5], layer_name=scope + '_conv2'))
+            x = max_pooling_original(x, kernel=[1, 4], stride=1)
+
+            x = lrelu(conv_layer_original(x, filter_size=40, kernel=[1, 3], layer_name=scope + '_conv2'))
+            x = max_pooling_original(x, kernel=[1, 4], stride=1)
+
+            x = flatten(x)
+            x = linear(x, unit=90, layer_name=scope + '_linear1')
+            x = relu(x)
+            x = linear(x, unit=45, layer_name=scope + '_linear2')
+            x = relu(x)
+            x = dropout_original(x, rate=0.2, is_training=is_training)
+            x = linear(x, unit=2, layer_name=scope + '_linear3')
+            return x
+
 
     def build_model(self):
         input_dims = [self.input_height, self.input_width, self.c_dim]
