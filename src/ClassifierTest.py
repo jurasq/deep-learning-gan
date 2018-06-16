@@ -74,7 +74,9 @@ class ClassifierTest(TripleGAN):
         """ Loss Function """
         # output of C for real images
         c_real_logits = self.classifier(self.inputs, is_training=True, reuse=False)
-        correct_prediction_train = tf.equal(tf.argmax(c_real_logits, 1), tf.argmax(self.train_labels, 1))
+        correct_prediction_train = tf.equal(tf.argmax(c_real_logits, 1), tf.argmax(self.y, 1))
+        self.train_accuracy = tf.reduce_mean(tf.cast(correct_prediction_train, tf.float32))
+
         c_loss_real = tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=c_real_logits))
 
@@ -152,13 +154,13 @@ class ClassifierTest(TripleGAN):
                     self.tf_lr_c: lr_c,
                 }
 
-                _, summary_str_c, c_loss = self.sess.run([self.c_optim, self.c_sum, self.c_loss], feed_dict=feed_dict)
+                _, summary_str_c, c_loss, train_acc = self.sess.run([self.c_optim, self.c_sum, self.c_loss, self.train_accuracy], feed_dict=feed_dict)
                 self.writer.add_summary(summary_str_c, counter)
 
                 # display training status
                 counter += 1
-                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, c_loss: %.8f" \
-                      % (epoch, idx, self.num_batches, time.time() - start_time, c_loss))
+                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, c_loss: %.8f, train_acc %.2f"
+                      % (epoch, idx, self.num_batches, time.time() - start_time, c_loss, train_acc))
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)
