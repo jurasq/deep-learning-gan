@@ -202,20 +202,20 @@ class TripleGAN(object):
             # Dimensions of H_conv4 = batch_size x 4 x 500 x 1
         return H_conv4, gene
 
-    def classifier_old(self, x, scope='classifier', is_training=True, reuse=False):
+    def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # convolutional + pooling #1
             l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20,
                                           kernel_shape=[4, 9], relu=True)
-            l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3], padding="VALID")
+            l2 = max_pooling_original(l1, kernel=[1, 3], stride=1)
 
             # convolutional + pooling #2
             l3 = conv_layer(name_scope="conv2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5])
-            l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[1, 4], padding="VALID")
+            l4 = max_pooling_original(l3, kernel=[1, 4], stride=1)
 
             # convolutional + pooling #3
             l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 3])
-            l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4], padding="VALID")
+            l6 = max_pooling_original(l5, kernel=[1, 4], stride=1)
 
             flat = flatten(l6)
             # fully connected layers
@@ -229,7 +229,7 @@ class TripleGAN(object):
 
         return logits
 
-    def classifier(self, x, scope="classifier", is_training=True, reuse=False):
+    def classifier_working(self, x, scope="classifier", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # x = gaussian_noise_layer(x) # default = 0.15
             x = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9], layer_name=scope + '_conv1'))
