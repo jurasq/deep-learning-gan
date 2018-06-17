@@ -409,10 +409,9 @@ class TripleGAN(object):
 
 
             """ Save generated samples to a file"""
-            if epoch % 10 == 0:
-                print("Generating samples...")
-                self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y=positive_example_labels, epoch=epoch, suffix="positive")
-                self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y=negative_example_labels, epoch=epoch, suffix="negative")
+            print("Generating samples...")
+            self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y=positive_example_labels, epoch=epoch, suffix="positive")
+            self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y=negative_example_labels, epoch=epoch, suffix="negative")
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)

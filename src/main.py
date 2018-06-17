@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=100, help='The size of batch')
     parser.add_argument('--unlabel_batch_size', type=int, default=250, help='The size of unlabel batch')
     parser.add_argument('--z_dim', type=int, default=200, help='Dimension of noise vector')
-    parser.add_argument('--lr_d', type=float, default=2e-6, help='learning rate of discriminator of GAN')
+    parser.add_argument('--lr_d', type=float, default=2e-4, help='learning rate of discriminator of GAN')
     parser.add_argument('--lr_g', type=float, default=2e-4, help='learning rate of generator of GAN')
     parser.add_argument('--lr_c', type=float, default=2e-3, help='learning rate of classifier of TripleGAN')
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoint',

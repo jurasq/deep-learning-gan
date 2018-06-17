@@ -123,12 +123,12 @@ def conv_max_forward_reverse_test(name_scope, input_tensor, num_kernels, kernel_
     input_channels = input_shape[-1] # number of input channels
 
     with tf.name_scope(name_scope):
-        forward_conv = tf.layers.conv2d(inputs=input_tensor, filters=num_kernels, kernel_size=kernel_shape, kernel_initializer=he_init, strides=stride, padding=padding, reuse=None, name="special_layer_1")
+        forward_conv = tf.layers.conv2d(inputs=input_tensor, filters=num_kernels, kernel_size=kernel_shape, kernel_initializer=he_init, strides=stride, padding=padding, reuse=None, name=name_scope+"special_layer_1")
 
         flipud_input = tf.reverse(input_tensor, axis=[2])
         fliplrud_input = tf.reverse(flipud_input, axis=[1])
 
-        reverse_conv = tf.layers.conv2d(inputs=fliplrud_input, filters=num_kernels, kernel_size=kernel_shape, kernel_initializer=he_init, strides=stride, padding=padding, name="special_layer_1", reuse=True)
+        reverse_conv = tf.layers.conv2d(inputs=fliplrud_input, filters=num_kernels, kernel_size=kernel_shape, kernel_initializer=he_init, strides=stride, padding=padding, name=name_scope+"special_layer_1", reuse=True)
         print(reverse_conv.shape)
         flipud_reverse_conv = tf.reverse(reverse_conv, axis=[2])
         print(flipud_reverse_conv.shape)
