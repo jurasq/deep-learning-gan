@@ -5,7 +5,7 @@ from utils import show_all_variables
 from utils import check_folder
 
 import tensorflow as tf
-import argparse
+import argparse   
 
 """parsing and configuration"""
 def parse_args():
@@ -15,7 +15,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='dna', choices=['mnist', 'fashion-mnist', 'celebA', 'cifar10', 'dna'],
                         help='The name of dataset')
     parser.add_argument('--epoch', type=int, default=1000, help='The number of epochs to run')
-    parser.add_argument('--batch_size', type=int, default=50, help='The size of batch')
+    parser.add_argument('--batch_size', type=int, default=100, help='The size of batch')
     parser.add_argument('--unlabel_batch_size', type=int, default=250, help='The size of unlabel batch')
     parser.add_argument('--z_dim', type=int, default=200, help='Dimension of noise vector')
     parser.add_argument('--lr_d', type=float, default=2e-4, help='learning rate of discriminator of GAN')
