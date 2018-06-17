@@ -1,0 +1,81 @@
+Epoch: [ 0], test_acc: 0.6510
+Epoch: [ 1], test_acc: 0.6630
+Epoch: [ 2], test_acc: 0.6680
+Epoch: [ 0], test_acc: 0.6580
+Epoch: [ 1], test_acc: 0.6670
+Epoch: [ 2], test_acc: 0.6680
+Epoch: [ 0], test_acc: 0.6800
+Epoch: [ 1], test_acc: 0.6730
+Epoch: [ 2], test_acc: 0.6590
+Epoch: [ 3], test_acc: 0.6470
+Epoch: [ 4], test_acc: 0.6550
+Epoch: [ 5], test_acc: 0.6250
+Epoch: [ 6], test_acc: 0.6350
+Epoch: [ 7], test_acc: 0.6380
+Epoch: [ 8], test_acc: 0.6310
+Epoch: [ 9], test_acc: 0.6350
+Epoch: [10], test_acc: 0.6270
+Epoch: [11], test_acc: 0.6300
+Epoch: [12], test_acc: 0.6140
+Epoch: [13], test_acc: 0.6110
+Epoch: [14], test_acc: 0.6250
+Epoch: [15], test_acc: 0.6270
+Epoch: [16], test_acc: 0.6350
+Epoch: [17], test_acc: 0.6220
+Epoch: [18], test_acc: 0.6350
+Epoch: [19], test_acc: 0.6270
+Epoch: [20], test_acc: 0.6510
+Epoch: [ 0], test_acc: 0.6470
+Epoch: [ 1], test_acc: 0.6670
+Epoch: [ 2], test_acc: 0.6680
+Epoch: [ 3], test_acc: 0.6660
+Epoch: [ 4], test_acc: 0.6570
+Epoch: [ 5], test_acc: 0.6560
+Epoch: [ 6], test_acc: 0.6370
+Epoch: [ 7], test_acc: 0.6320
+Epoch: [ 8], test_acc: 0.6440
+Epoch: [ 9], test_acc: 0.6350
+Epoch: [10], test_acc: 0.6170
+Epoch: [11], test_acc: 0.5990
+Epoch: [12], test_acc: 0.6190
+Epoch: [13], test_acc: 0.6180
+Epoch: [14], test_acc: 0.6370
+Epoch: [15], test_acc: 0.6190
+Epoch: [16], test_acc: 0.6310
+Epoch: [17], test_acc: 0.6130
+Epoch: [18], test_acc: 0.6220
+Epoch: [19], test_acc: 0.6190
+Epoch: [20], test_acc: 0.6360
+Epoch: [21], test_acc: 0.6010
+Epoch: [22], test_acc: 0.6340
+Epoch: [23], test_acc: 0.6270
+Epoch: [24], test_acc: 0.6240
+Epoch: [25], test_acc: 0.6320
+Epoch: [26], test_acc: 0.6320
+Epoch: [27], test_acc: 0.6390
+Epoch: [28], test_acc: 0.6380
+Epoch: [29], test_acc: 0.6390
+Epoch: [30], test_acc: 0.6380
+Epoch: [31], test_acc: 0.6320
+Epoch: [32], test_acc: 0.6220
+Epoch: [33], test_acc: 0.6360
+Epoch: [34], test_acc: 0.6280
+Epoch: [35], test_acc: 0.6370
+Epoch: [36], test_acc: 0.6320
+Epoch: [37], test_acc: 0.6240
+Epoch: [38], test_acc: 0.6190
+Epoch: [39], test_acc: 0.6230
+Epoch: [40], test_acc: 0.6150
+Epoch: [41], test_acc: 0.6500
+Epoch: [42], test_acc: 0.6410
+Epoch: [43], test_acc: 0.6270
+Epoch: [44], test_acc: 0.6160
+Epoch: [45], test_acc: 0.6180
+Epoch: [46], test_acc: 0.6200
+Epoch: [47], test_acc: 0.6120
+Epoch: [48], test_acc: 0.6350
+Epoch: [49], test_acc: 0.6260
+Epoch: [50], test_acc: 0.6130
+Epoch: [51], test_acc: 0.6280
+Epoch: [52], test_acc: 0.6260
+Epoch: [53], test_acc: 0.6140
