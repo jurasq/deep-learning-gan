@@ -18,49 +18,6 @@ def weight_norm(x, output_dim) :
 
     return tf.variables_initializer(w_init)
 
-def mlp(name_scope,input_tensor,name_suffix=None,batch_norm=False,relu=False,is_training=True):
-    """
-    Return a 3 hidden layer perceptron, possibly with a ReLU at the end.
-    :param name_scope:   where the variables live
-    :param input_tensor: of shape [batch, in_height, in_width, in_channels], e.g. [15 500 4 1]
-    """
-
-    name_suffix = name_suffix if name_suffix else ""
-
-    #E.g. batch_size x 500x4x1 for the first input
-    input_flatten = reshape(input_tensor,[1,-1])
-    input_shape = reshape(input_tensor,[-1]).get_shape().as_list()
-
-    #input_channels = input_shape[-1]
-
-    with tf.name_scope(name_scope):
-
-        weights_shape = [input_shape[0],input_shape[0]]
-        weights1 = tf.Variable(tf.random_normal(weights_shape),name='weights'+name_suffix)
-        weights2 = tf.Variable(tf.random_normal(weights_shape),name='weights'+name_suffix)
-        weightsout =tf.Variable(tf.random_normal(weights_shape),name='weights'+name_suffix)
-
-        bias1 =  tf.Variable(tf.random_normal(input_shape),name='biases'+name_suffix)
-        bias2 = tf.Variable(tf.random_normal(input_shape),name='biases'+name_suffix)
-        biasout = tf.Variable(tf.random_normal(input_shape),name='biases'+name_suffix)
-
-        #Define a perceptron layer
-        layer_1 = tf.add(tf.matmul(input_flatten, weights1), bias1)
-        # Hidden fully connected layer with 256 neurons
-        layer_2 = tf.add(tf.matmul(layer_1, weights2), bias2)
-        # Output fully connected layer with a neuron for each class
-        out_layer = tf.matmul(layer_2, weightsout) + biasout
-
-
-
-        if relu:
-            out_layer = tf.nn.leaky_relu(out_layer, name="relu_"+name_suffix)
-        if batch_norm:
-            out_layer = tf.contrib.layers.batch_norm(inputs = out_layer, center=True, scale=True, is_training=is_training)
-
-        return out_layer
-
-
 def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
                stride=1, padding="VALID", relu=True, lrelu=False,
                name_suffix=None, batch_norm=False, is_training=True):
@@ -125,9 +82,9 @@ def conv_max_forward_reverse(name_scope, input_tensor, num_kernels, kernel_shape
     with tf.name_scope(name_scope):
         shape = kernel_shape + [input_channels, num_kernels]
         initer = tf.truncated_normal(shape, stddev=math.sqrt(2 / float(input_channels)))
-        weights = tf.Variable(initer, name='weights')
+        weights = tf.get_variable(initializer=initer, name=name_scope+'weights'+name_suffix)
         num_kernels = weights.get_shape()[3]
-        biases = tf.Variable(tf.zeros([num_kernels]), name='biases')
+        biases = tf.get_variable(initializer=tf.zeros([num_kernels]), name=name_scope+'biases'+name_suffix)
 
         # If one component of shape is the special value -1, the size of that dimension is computed
         #  so that the total size remains constant.

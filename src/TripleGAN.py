@@ -221,7 +221,7 @@ class TripleGAN(object):
 
             # convolutional + pooling #3
             l5 = lrelu(conv_layer_original(l4, filter_size=40, kernel=[1, 3]))
-            #l5 = conv_layer(name_scope="convolutional_2", input_tensor=l4, num_kernels=30, kernel_shape=[1, 5])
+            #l5 = conv_layer(name_scope="convolutional_3", input_tensor=l4, num_kernels=30, kernel_shape=[1, 5])
             l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4], padding="VALID")
 
             flat = flatten(l6)
