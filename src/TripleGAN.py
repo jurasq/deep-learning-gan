@@ -6,7 +6,7 @@ import time
 
 class TripleGAN(object):
     def __init__(self, sess, epoch, batch_size, unlabel_batch_size, z_dim, dataset_name,
-                 nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir):
+                 nexamples, lr_d, lr_g, lr_c, checkpoint_dir, result_dir, log_dir, skip_epochs, confuse_dis):
         self.sess = sess
         self.dataset_name = dataset_name
         self.checkpoint_dir = checkpoint_dir
@@ -17,7 +17,10 @@ class TripleGAN(object):
         self.unlabelled_batch_size = unlabel_batch_size
         self.test_set_size = 1000
         self.test_batch_size = 100
-        self.model_name = "TripleGAN"  # name for checkpoint
+        self.model_name = "TripleGAN" # name for checkpoint
+        self.skip_epochs = skip_epochs
+        self.confuse_dis = confuse_dis
+
 
         if self.dataset_name == 'dna':
             self.categories = np.asarray(['A', 'C', 'G', 'T'])
@@ -246,6 +249,8 @@ class TripleGAN(object):
         """ Loss Function """
         # A Game with Three Players
 
+
+
         # output of D for real images
         D_real, D_real_logits, _ = self.discriminator(self.inputs, self.y, is_training=True, reuse=False)
 
@@ -261,13 +266,26 @@ class TripleGAN(object):
         C_fake_logits = self.classifier(G_gene, is_training=True, reuse=True)
         R_P = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.argmax(self.y, axis=1), logits=C_fake_logits))
 
-        # get loss for discriminator
-        d_loss_real = tf.reduce_mean(
-            tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_real_logits,
-                                                              labels=tf.ones(self.batch_size, dtype=tf.int32)))
-        d_loss_fake = tf.reduce_mean(
-            tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_fake_logits,
-                                                              labels=tf.zeros(self.batch_size, dtype=tf.int32)))
+         # get loss for discriminator   
+        if(self.confuse_dis):
+            rand_vector = np.random.uniform(0,1,size = self.batch_size)
+            d_lab_real = self.alter_label(rand_vector, 'Real', 0.8)
+            d_lab_fake = self.alter_label(rand_vector, 'Fake', 0.8)
+
+            d_loss_real = tf.reduce_mean(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_real_logits,
+                                                                  labels=d_lab_real))
+            d_loss_fake = tf.reduce_mean(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_fake_logits,
+                                                                  labels=d_lab_fake))
+        else:
+        
+            d_loss_real = tf.reduce_mean(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_real_logits,
+                                                                  labels=tf.ones(self.batch_size, dtype=tf.int32)))
+            d_loss_fake = tf.reduce_mean(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_fake_logits,
+                                                                  labels=tf.zeros(self.batch_size, dtype=tf.int32)))
         self.d_loss = d_loss_real + d_loss_fake
 
         # get loss for generator
@@ -391,8 +409,16 @@ class TripleGAN(object):
                     self.tf_lr_c: lr_c,
                 }
                 # update D network
-                _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
-                self.writer.add_summary(summary_str, counter)
+                if(self.skip_epochs):
+
+                    if  epoch% 5 == 0:
+
+                        _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
+                        self.writer.add_summary(summary_str, counter)
+                else:
+
+                    _, summary_str, d_loss = self.sess.run([self.d_optim, self.d_sum, self.d_loss], feed_dict=feed_dict)
+                    self.writer.add_summary(summary_str, counter)
 
                 # update G network
                 _, summary_str_g, g_loss = self.sess.run([self.g_optim, self.g_sum, self.g_loss], feed_dict=feed_dict)
@@ -545,3 +571,11 @@ class TripleGAN(object):
         else:
             print(" [*] Failed to find a checkpoint")
             return False, 0
+    def alter_label(self, random_vector, realorfake, threshold):
+
+
+        if(realorfake=='Real'):
+            labels = np.where(random_vector <=threshold, 0, 1)
+        elif(realorfake =='Fake'):
+            labels = np.where(random_vector <=threshold, 1, 0)
+        return tf.convert_to_tensor(labels)

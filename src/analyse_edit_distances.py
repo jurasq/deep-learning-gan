@@ -8,6 +8,9 @@ import dna
 import evaluateSequences
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import os
+import pickle
 #First analyze the distance to a set of testing sets
 #sequences = dna.load_dna_data(100,1000,"../Data",["Human"],"pos")
 #seq_subset = sequences[0][0]
@@ -24,16 +27,18 @@ seq_dir = sys.argv[1]
 outputName=sys.argv[2]
 #should be somehing like "negative"
 
-epfiles = [filename for filename in os.listdir('../TripleGAN_dna_50_200/') if filename.startswith(seq_dir)]
+epfiles = ['../TripleGAN_dna_50_200/'+filename for filename in os.listdir('../TripleGAN_dna_50_200/') if filename.startswith(seq_dir)]
+epfiles=np.sort(epfiles)
+print(epfiles)
 
 #compute distances between sequences every 10 epochs
 #epochs = ['0'+str(i)+'0' for i in range(0,10)]
 #epochs.append('100')
 #epochs.append('109')
-dec_seq_subset2 = evaluateSequences.decode_dna_matrices(seq_subset2)
+#dec_seq_subset2 = evaluateSequences.decode_dna_matrices(seq_subset2)
 dists=[]
 for filename in epfiles:
-    filename = +'_'+ep+'.txt'
+#    filename = +'_'+ep+'.txt'
     fileInput = open(filename, "r")
     seq_array=[]
 #decode seq to strings
