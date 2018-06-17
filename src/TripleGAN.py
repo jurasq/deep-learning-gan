@@ -20,7 +20,7 @@ class TripleGAN(object):
         self.model_name = "TripleGAN"  # name for checkpoint
 
         if self.dataset_name == 'dna':
-            self.categories = np.asarray(['A', 'C', 'T', 'G'])
+            self.categories = np.asarray(['A', 'C', 'G', 'T'])
 
             self.input_height = 4  # One-hot encoding
             self.input_width = 500  # Input sequence length
