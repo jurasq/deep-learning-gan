@@ -210,7 +210,7 @@ class TripleGAN(object):
         with tf.variable_scope(scope, reuse=reuse):
             # convolutional + pooling #1
             #l1 = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
-            # l1 = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
+            # l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
             l1 = conv_layer(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3], padding="VALID")
 
@@ -221,7 +221,7 @@ class TripleGAN(object):
 
             # convolutional + pooling #3
             #l5 = lrelu(conv_layer_original(l4, filter_size=40, kernel=[1, 3]))
-            l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 5], relu=True, lrelu=True)
+            l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 3], relu=True, lrelu=True)
             l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4], padding="VALID")
 
             flat = flatten(l6)
