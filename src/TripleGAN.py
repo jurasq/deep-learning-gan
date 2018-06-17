@@ -369,12 +369,16 @@ class TripleGAN(object):
 
         # initialize all variables
         tf.global_variables_initializer().run()
+        tf.local_variables_initializer().run()
         lr_d = self.lr_d
         lr_g = self.lr_g
         lr_c = self.lr_c
 
         # graph inputs for visualize training results
         visual_sample_z = np.random.uniform(-1, 1, size=(self.generated_batch_size, self.z_dim))
+        negative_example_labels = np.concatenate([np.zeros((self.generated_batch_size, 1)), np.ones((self.generated_batch_size, 1))], axis=1)
+        positive_example_labels = np.concatenate([np.zeros((self.generated_batch_size, 1)), np.ones((self.generated_batch_size, 1))], axis=1)
+        visual_sample_y = np.concatenate([positive_example_labels, negative_example_labels])
 
         # saver to save model
         self.saver = tf.train.Saver()
@@ -443,7 +447,7 @@ class TripleGAN(object):
 
             """ Save generated samples to a file"""
             if epoch != 0 and epoch % 10 == 0:
-                self.generate_and_save_samples(visual_sample_z=visual_sample_z, epoch=epoch);
+                self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y=visual_sample_y, epoch=epoch);
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)
@@ -462,11 +466,11 @@ class TripleGAN(object):
             # save model for final step
         self.save(self.checkpoint_dir, counter)
 
-    def generate_and_save_samples(self, visual_sample_z, epoch):
+    def generate_and_save_samples(self, visual_sample_z, visual_sample_y, epoch):
         saving_start_time = time.time()
         # save some (15) generated sequences for every epoch
         _, samples = self.sess.run(self.fake_sequences,
-                                feed_dict={self.visual_z: visual_sample_z})
+                                feed_dict={self.visual_z: visual_sample_z, self.visual_y: visual_sample_y})
         one_hot_decoded = self.one_hot_decode(samples)
         save_sequences(one_hot_decoded,
                        self.get_files_location('_generated_sequences_epoch_{:03d}.txt'.format(
