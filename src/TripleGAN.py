@@ -338,9 +338,9 @@ class TripleGAN(object):
 
         # graph inputs for visualize training results
         visual_sample_z = np.random.uniform(-1, 1, size=(self.generated_batch_size, self.z_dim))
-        negative_example_labels = np.concatenate([np.ones((self.generated_batch_size/2, 1)), np.zeros((self.generated_batch_size/2, 1))], axis=1)
-        positive_example_labels = np.concatenate([np.zeros((self.generated_batch_size/2, 1)), np.ones((self.generated_batch_size/2, 1))], axis=1)
-        visual_sample_y = np.concatenate([positive_example_labels, negative_example_labels])
+        negative_example_labels = np.concatenate([np.ones((self.generated_batch_size, 1)), np.zeros((self.generated_batch_size, 1))], axis=1)
+        positive_example_labels = np.concatenate([np.zeros((self.generated_batch_size, 1)), np.ones((self.generated_batch_size, 1))], axis=1)
+
 
         # saver to save model
         self.saver = tf.train.Saver()
@@ -409,9 +409,10 @@ class TripleGAN(object):
 
 
             """ Save generated samples to a file"""
-            if epoch != 0 and epoch % 10 == 0:
+            if epoch % 10 == 0:
                 print("Generating samples...")
-                self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y=visual_sample_y, epoch=epoch);
+                self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y=positive_example_labels, epoch=epoch, suffix="positive")
+                self.generate_and_save_samples(visual_sample_z=visual_sample_z, visual_sample_y=negative_example_labels, epoch=epoch, suffix="negative")
 
             """ Measure accuracy (enhancers vs nonenhancers) of discriminator and save"""
             self.test_and_save_accuracy(epoch=epoch)
@@ -430,15 +431,16 @@ class TripleGAN(object):
             # save model for final step
         self.save(self.checkpoint_dir, counter)
 
-    def generate_and_save_samples(self, visual_sample_z, visual_sample_y, epoch):
+    def generate_and_save_samples(self, visual_sample_z, visual_sample_y, epoch, suffix=None):
+        suffix = suffix if suffix else ""
         saving_start_time = time.time()
         # save some (15) generated sequences for every epoch
         _, samples = self.sess.run(self.fake_sequences,
-                                feed_dict={self.visual_z: visual_sample_z, self.visual_y: visual_sample_y})
+                                   feed_dict={self.visual_z: visual_sample_z, self.visual_y: visual_sample_y})
         one_hot_decoded = self.one_hot_decode(samples)
         save_sequences(one_hot_decoded,
-                       self.get_files_location('_generated_sequences_epoch_{:03d}.txt'.format(
-                           epoch)))
+                       self.get_files_location('_generated_sequences_epoch'+suffix+'_{:03d}.txt'.format(
+                           epoch) ))
         saving_end_time = time.time()
         print("Saved %d generated samples to file, took %4.4f" % (
             self.generated_batch_size, saving_end_time - saving_start_time))
