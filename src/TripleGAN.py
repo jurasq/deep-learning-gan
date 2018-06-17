@@ -190,9 +190,9 @@ class TripleGAN(object):
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # convolutional + pooling #1
-            # l1 = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
+            l1 = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
             #l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
-            l1 = conv_max_forward_reverse_test(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
+            # l1 = conv_max_forward_reverse_test(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
             #l1 = conv_layer(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
 
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3], padding="VALID")
