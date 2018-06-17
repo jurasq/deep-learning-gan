@@ -82,9 +82,9 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
 
         weights_shape = kernel_shape + [input_channels, num_kernels]
         init_vals_weights = tf.truncated_normal(weights_shape, stddev=math.sqrt(2 / float(input_channels)))
-        filter_weights = tf.get_variable(initializer=init_vals_weights, name='weights'+name_suffix)
+        filter_weights = tf.get_variable(initializer=init_vals_weights, name=name_scope+'weights'+name_suffix)
 
-        biases = tf.get_variable(initializer=tf.constant(0.1, shape=[num_kernels]), name='biases'+name_suffix)
+        biases = tf.get_variable(initializer=tf.constant(0.1, shape=[num_kernels]), name=name_scope+'biases'+name_suffix)
 
         #Define a convolutional layer
         layer = tf.nn.conv2d(input_tensor, filter_weights, strides=[1, stride, stride, 1], padding=padding) + biases
