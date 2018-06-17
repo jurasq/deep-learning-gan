@@ -60,7 +60,7 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
         return layer
 
 
-def conv_layer_original(x, filter_size, kernel, stride=1, padding='VALID', wn=False, layer_name="conv"):
+def conv_layer_original(x, filter_size, kernel, stride=1, padding='SAME', wn=False, layer_name="conv"):
     with tf.name_scope(layer_name):
         if wn:
             w_init = weight_norm(x, filter_size)
@@ -114,7 +114,7 @@ def conv_max_forward_reverse(name_scope, input_tensor, num_kernels, kernel_shape
             return max_conv
 
 def conv_max_forward_reverse_test(name_scope, input_tensor, num_kernels, kernel_shape,
-                             stride=1, padding='VALID', relu=True, lrelu=False, name_suffix = None, batch_norm=False, is_training=True):
+                             stride=1, padding='SAME', relu=True, lrelu=False, name_suffix = None, batch_norm=False, is_training=True):
     """
     Returns a convolution layer
     """
