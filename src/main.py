@@ -11,16 +11,16 @@ import argparse
 def parse_args():
     desc = "Tensorflow implementation of TripleGAN"
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('--n', type=int, default=1000, help='The number of samples from a dataset')
+    parser.add_argument('--n', type=int, default=13500, help='The number of samples from a dataset')
     parser.add_argument('--dataset', type=str, default='dna', choices=['mnist', 'fashion-mnist', 'celebA', 'cifar10', 'dna'],
                         help='The name of dataset')
     parser.add_argument('--epoch', type=int, default=1000, help='The number of epochs to run')
-    parser.add_argument('--batch_size', type=int, default=10, help='The size of batch')
+    parser.add_argument('--batch_size', type=int, default=50, help='The size of batch')
     parser.add_argument('--unlabel_batch_size', type=int, default=250, help='The size of unlabel batch')
     parser.add_argument('--z_dim', type=int, default=200, help='Dimension of noise vector')
-    parser.add_argument('--lr_d', type=float, default=2e-7, help='learning rate of discriminator of GAN')
-    parser.add_argument('--lr_g', type=float, default=2e-2, help='learning rate of generator of GAN')
-    parser.add_argument('--lr_c', type=float, default=2e-7, help='learning rate of classifier of TripleGAN')
+    parser.add_argument('--lr_d', type=float, default=2e-4, help='learning rate of discriminator of GAN')
+    parser.add_argument('--lr_g', type=float, default=2e-4, help='learning rate of generator of GAN')
+    parser.add_argument('--lr_c', type=float, default=2e-3, help='learning rate of classifier of TripleGAN')
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoint',
                         help='Directory name to save the checkpoints')
     parser.add_argument('--result_dir', type=str, default='results',
