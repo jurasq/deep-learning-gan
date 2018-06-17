@@ -209,8 +209,8 @@ class TripleGAN(object):
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # convolutional + pooling #1
-            #l1 = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
-            l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
+            l1 = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
+            #l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
             #l1 = conv_layer(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3], padding="VALID")
 
@@ -422,7 +422,8 @@ class TripleGAN(object):
 
                 # display training status
                 counter += 1
-                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f, c_loss: %.8f" \
+                if idx % 10 == 0:
+                    print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f, c_loss: %.8f" \
                       % (epoch, idx, self.num_batches, time.time() - start_time, d_loss, g_loss, c_loss))
 
 
