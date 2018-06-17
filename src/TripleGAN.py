@@ -69,15 +69,19 @@ class TripleGAN(object):
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
 
             x = conv_concat(x, y)
-            x = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
+            # x = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
+            x = lrelu(conv_layer_original(x, filter_size=20,
+                                           kernel=[4, 9]))
             x = max_pool_layer(name_scope="max_pool_1", input_tensor=x, pool_size=[1, 3])
 
             x = conv_concat(x, y)
-            x = conv_layer(name_scope="convolutional_2", input_tensor=x, num_kernels=30, kernel_shape=[1, 5])
+            # x = conv_layer(name_scope="convolutional_2", input_tensor=x, num_kernels=30, kernel_shape=[1, 5])
+            x = lrelu(conv_layer_original(x, filter_size=30, kernel=[1, 5]))
             x = max_pool_layer(name_scope="max_pool_2", input_tensor=x, pool_size=[1, 4])
 
             x = conv_concat(x, y)
-            x = conv_layer(name_scope="convolutional_3", input_tensor=x, num_kernels=40, kernel_shape=[1, 3])
+            # x = conv_layer(name_scope="convolutional_3", input_tensor=x, num_kernels=40, kernel_shape=[1, 3])
+            x = lrelu(conv_layer_original(x, filter_size=40, kernel=[1, 3]))
             x = max_pool_layer(name_scope="max_pool_3", input_tensor=x, pool_size=[1, 4])
 
             x = flatten(x)
