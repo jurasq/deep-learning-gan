@@ -338,8 +338,8 @@ class TripleGAN(object):
 
         # graph inputs for visualize training results
         visual_sample_z = np.random.uniform(-1, 1, size=(self.generated_batch_size, self.z_dim))
-        negative_example_labels = np.concatenate([np.zeros((self.generated_batch_size, 1)), np.ones((self.generated_batch_size, 1))], axis=1)
-        positive_example_labels = np.concatenate([np.zeros((self.generated_batch_size, 1)), np.ones((self.generated_batch_size, 1))], axis=1)
+        negative_example_labels = np.concatenate([np.ones((self.generated_batch_size/2, 1)), np.zeros((self.generated_batch_size/2, 1))], axis=1)
+        positive_example_labels = np.concatenate([np.zeros((self.generated_batch_size/2, 1)), np.ones((self.generated_batch_size/2, 1))], axis=1)
         visual_sample_y = np.concatenate([positive_example_labels, negative_example_labels])
 
         # saver to save model
