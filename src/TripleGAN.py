@@ -68,9 +68,8 @@ class TripleGAN(object):
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
 
             x = conv_concat(x, y)
-            # x = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
-            x = lrelu(conv_layer_original(x, filter_size=20,
-                                           kernel=[4, 9]))
+            x = conv_max_forward_reverse_test(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], lrelu=True)
+            # x = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
             x = max_pool_layer(name_scope="max_pool_1", input_tensor=x, pool_size=[1, 3])
 
             x = conv_concat(x, y)
