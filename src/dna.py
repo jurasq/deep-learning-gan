@@ -70,7 +70,9 @@ def load_dna_data(num_train, num_test, base_folder, species, samples_to_use, tes
             raw_neg_data = np.load(f_neg)
 
             npositive = raw_pos_data.shape[0]
+            print('total +ve samples' , npositive)
             nnegative = raw_neg_data.shape[0]
+            print('total -ve samples', nnegative)
 
             pos_labels = np.ones((npositive, 1), dtype=int)
             neg_labels = np.zeros((nnegative, 1), dtype=int)
@@ -85,7 +87,7 @@ def load_dna_data(num_train, num_test, base_folder, species, samples_to_use, tes
             # Choose num_train indices from range(npositive, npositive+nnegative) because positive come first
             train_idx = np.random.choice(nnegative, num_train, replace=False) + npositive
         elif samples_to_use == "both":
-            train_idx = np.random.choice(nnegative + npositive, num_train, replace=False)
+            train_idx = np.random.choice(nnegative + npositive, num_train*2, replace=False)
 
         # Always choose num_test/2 from positive and num_test/2 from negative, excluding the training
         free_pos_idx = np.setdiff1d(np.arange(npositive), train_idx)
