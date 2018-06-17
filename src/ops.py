@@ -89,7 +89,7 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
 
         #Define a convolutional layer
         # layer = tf.nn.conv2d(input_tensor, filter_weights, strides=[1, stride, stride, 1], padding=padding) + biases
-        layer = tf.layers.conv2d(inputs=input_tensor, filters=num_kernels, kernel_size=kernel_shape, strides=[1, stride, stride, 1], padding=padding)
+        layer = tf.layers.conv2d(inputs=input_tensor, filters=num_kernels, kernel_size=kernel_shape, strides=[stride, stride], padding=padding)
 
         #Add batch normalisation if specified
         if batch_norm:
