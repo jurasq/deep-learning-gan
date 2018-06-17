@@ -41,7 +41,7 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
         init_vals_weights = tf.truncated_normal(weights_shape, stddev=math.sqrt(2 / float(input_channels)))
         filter_weights = tf.get_variable(initializer=init_vals_weights, name=name_scope+'weights'+name_suffix)
 
-        biases = tf.get_variable(initializer=tf.constant(0.1, shape=[num_kernels]), name=name_scope+'biases'+name_suffix)
+        biases = tf.get_variable(initializer=tf.constant(0.0, shape=[num_kernels]), name=name_scope+'biases'+name_suffix)
 
         #Define a convolutional layer
         layer = tf.nn.conv2d(input_tensor, filter_weights, strides=[1, stride, stride, 1], padding=padding) + biases
@@ -81,7 +81,7 @@ def conv_max_forward_reverse(name_scope, input_tensor, num_kernels, kernel_shape
 
     with tf.name_scope(name_scope):
         shape = kernel_shape + [input_channels, num_kernels]
-        initer = tf.truncated_normal(shape, stddev=math.sqrt(2 / float(input_channels)))
+        initer = tf.truncated_normal(shape, stddev=math.sqrt(1 / float(input_channels)))
         weights = tf.get_variable(initializer=initer, name=name_scope+'weights'+name_suffix)
         num_kernels = weights.get_shape()[3]
         biases = tf.get_variable(initializer=tf.zeros([num_kernels]), name=name_scope+'biases'+name_suffix)
