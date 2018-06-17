@@ -60,7 +60,7 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
         return layer
 
 
-def conv_layer_original(x, filter_size, kernel, stride=1, padding='SAME', wn=False, layer_name="conv"):
+def conv_layer_original(x, filter_size, kernel, stride=1, padding='VALID', wn=False, layer_name="conv"):
     with tf.name_scope(layer_name):
         if wn:
             w_init = weight_norm(x, filter_size)
