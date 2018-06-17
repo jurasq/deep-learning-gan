@@ -26,27 +26,30 @@ class GAN(TripleGAN):
 
     def discriminator(self, dna_sequence, y=None, scope="discriminator", is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
-            # convolutional with reverse filters like in paper + pooling #1
-            l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=dna_sequence, num_kernels=20,
-                                          kernel_shape=[4, 9], relu=True, is_training=is_training)
-            l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3])
+            # convolutional + pooling #1
+            l1 = lrelu(conv_layer_original(dna_sequence, filter_size=20, kernel=[4, 9]))
+            #l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
+            #l1 = conv_layer(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
+            l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3], padding="VALID")
 
             # convolutional + pooling #2
-            l3 = conv_layer(name_scope="conv2", input_tensor=l2, num_kernels=30,
-                            kernel_shape=[1, 5], relu=True, is_training=is_training)
-            l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[1, 4])
+            l3 = lrelu(conv_layer_original(l2, filter_size=30, kernel=[1, 5]))
+            #l3 = conv_layer(name_scope="conv2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5], relu=True, lrelu=True)
+            l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[1, 4], padding="VALID")
 
             # convolutional + pooling #3
-            l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40,
-                            kernel_shape=[1, 3], relu=True, is_training=is_training)
-            l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4])
+            l5 = lrelu(conv_layer_original(l4, filter_size=40, kernel=[1, 3]))
+            #l5 = conv_layer(name_scope="conv3", input_tensor=l4, num_kernels=40, kernel_shape=[1, 3], relu=True, lrelu=True)
+            l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4], padding="VALID")
 
             flat = flatten(l6)
             # fully connected layers
             l7 = tf.layers.dense(inputs=flat, units=90)
+            l7 = tf.nn.relu(l7)
+            l7 = tf.layers.dropout(l7, rate=0.15, training=is_training)
             l8 = tf.layers.dense(inputs=l7, units=45)
-
-            logits = tf.layers.dense(inputs=l8, units=2)  # 2 units, ie. probability of each class (fake, real)
+            l8 = tf.nn.relu(l8)
+            logits = tf.layers.dense(inputs=l8, units=2)
             softmax = tf.nn.softmax(logits)
 
         # previously used only logits, now returning the 3 for compatibility with triple gan
@@ -143,6 +146,10 @@ class GAN(TripleGAN):
         # Test labels, shape: [test_batch_size, 2], one hot encoded
         self.test_label = tf.placeholder(tf.float32, [self.test_batch_size, self.y_dim], name='test_label')
 
+        # Full test sequences + labels, shape: [test_set_size, 4, 500, 1], [test_set_size, 2], one hot encoded
+        self.full_test_dataset = tf.placeholder(tf.float32, [self.test_set_size] + input_dims, name="all_test_sequences")
+        self.full_test_dataset_labels = tf.placeholder(tf.float32, [self.test_set_size, self.y_dim], name="all_test_label")
+
         # Labels for the generated sequences - this is not really needed
         self.visual_y = tf.placeholder(tf.float32, [self.generated_batch_size, self.y_dim], name='visual_y')
 
@@ -178,6 +185,11 @@ class GAN(TripleGAN):
         _, _, predicted_test_softmax = self.discriminator(self.test_inputs, is_training=False, reuse=True)
         correct_prediction = tf.equal(tf.argmax(predicted_test_softmax, 1), tf.argmax(self.test_label, 1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+        # test AUC on full dataset
+        _, _, test_logits_full = self.discriminator(self.full_test_dataset, is_training=False, reuse=True)
+        softmax_logits_full = tf.nn.softmax(test_logits_full, axis=1)
+        self.auc_on_test_set = tf.metrics.auc(predictions=softmax_logits_full, labels=self.full_test_dataset_labels)
 
         """ Training """
 
