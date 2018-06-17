@@ -52,6 +52,7 @@ class ClassifierTest(TripleGAN):
     def init_data(self, nexamples):
         print("Running ClassifierTest, so loading both positive and negative samples...")
         print("Train size (each label): %d, test size (total): %d" % (nexamples, self.test_set_size))
+        print('our nexample', nexamples)
         return dna.prepare_data(
             nexamples, self.test_set_size, samples_to_use="both", test_both=True)  # trainX, trainY, testX, testY
 
@@ -224,7 +225,7 @@ def main():
     # open session
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         clf = ClassifierTest(sess, epoch=400, batch_size=100, unlabel_batch_size=-1,
-                             z_dim=-1, dataset_name="dna", nexamples=12000, lr_d=-1, lr_g=-1, lr_c=2e-5,
+                             z_dim=-1, dataset_name="dna", nexamples=13500, lr_d=-1, lr_g=-1, lr_c=2e-5,
                              checkpoint_dir='checkpoint', result_dir='result', log_dir='logs')
 
         # build graph
