@@ -19,7 +19,7 @@ def weight_norm(x, output_dim) :
     return tf.variables_initializer(w_init)
 
 def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
-               stride=1, padding="VALID", relu=True, lrelu=False,
+               stride=1, padding="SAME", relu=True, lrelu=False,
                name_suffix=None, batch_norm=False, is_training=True):
     """
     Return a convolution layer, possibly with a ReLU at the end.
