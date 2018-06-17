@@ -113,7 +113,40 @@ def conv_max_forward_reverse(name_scope, input_tensor, num_kernels, kernel_shape
         else:
             return max_conv
 
+def conv_max_forward_reverse_test(name_scope, input_tensor, num_kernels, kernel_shape,
+                             stride=1, padding='VALID', relu=True, lrelu=False, name_suffix = None, batch_norm=False, is_training=True):
+    """
+    Returns a convolution layer
+    """
+    name_suffix = name_suffix if name_suffix else ""
+    input_shape = input_tensor.get_shape().as_list()
+    input_channels = input_shape[-1] # number of input channels
 
+    with tf.name_scope(name_scope):
+        forward_conv = tf.layers.conv2d(inputs=input_tensor, filters=num_kernels, kernel_size=kernel_shape, kernel_initializer=he_init, strides=stride, padding=padding, reuse=True)
+
+        flipud_input = tf.reverse(input_tensor, axis=[2])
+        fliplrud_input = tf.reverse(flipud_input, axis=[1])
+
+        reverse_conv = tf.layers.conv2d(inputs=fliplrud_input, filters=num_kernels, kernel_size=kernel_shape, kernel_initializer=he_init, strides=stride, padding=padding)
+
+
+        fliplr_reverse_conv = tf.reverse(reverse_conv, axis=[1])
+        fliplrud_reverse_conv = tf.reverse(fliplr_reverse_conv, axis=[2])
+
+        max_conv = tf.maximum(forward_conv, fliplrud_reverse_conv, name="conv1")
+
+        # Add batch normalisation if specified
+        if batch_norm:
+            max_conv = tf.contrib.layers.batch_norm(inputs=max_conv, center=True, scale=True, is_training=is_training)
+
+        if relu and lrelu:
+            return tf.nn.leaky_relu(max_conv, name="lrelu_"+name_suffix)
+        elif relu:
+            return tf.nn.relu(max_conv, name="relu_"+name_suffix)
+        else:
+            return max_conv
+        
 def deconv_layer(x, filter_size, kernel, stride=1, padding='SAME', wn=False, layer_name='deconv'):
     with tf.name_scope(layer_name):
         if wn :

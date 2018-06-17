@@ -1,0 +1,8 @@
+Epoch: [ 0], test_acc: 0.5000
+Epoch: [ 0], test_acc: 0.6310
+Epoch: [ 1], test_acc: 0.6490
+Epoch: [ 2], test_acc: 0.6600
+Epoch: [ 0], test_acc: 0.4980
+Epoch: [ 1], test_acc: 0.5020
+Epoch: [ 2], test_acc: 0.4920
+Epoch: [ 3], test_acc: 0.4760
