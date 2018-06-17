@@ -11,7 +11,7 @@ import argparse
 def parse_args():
     desc = "Tensorflow implementation of TripleGAN"
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('--n', type=int, default=1000, help='The number of samples from a dataset')
+    parser.add_argument('--n', type=int, default=13500, help='The number of samples from a dataset')
     parser.add_argument('--dataset', type=str, default='dna', choices=['mnist', 'fashion-mnist', 'celebA', 'cifar10', 'dna'],
                         help='The name of dataset')
     parser.add_argument('--epoch', type=int, default=1000, help='The number of epochs to run')

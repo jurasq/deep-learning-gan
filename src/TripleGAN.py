@@ -68,6 +68,7 @@ class TripleGAN(object):
 
     def discriminator(self, x, y_, scope='discriminator', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
+#            x = tf.layers.dropout(x, rate=0.2, training=is_training)
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
 
             x = conv_concat(x, y)
@@ -188,6 +189,7 @@ class TripleGAN(object):
 
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
+ #           x = gaussian_noise_layer(x) # default = 0.15
             # convolutional + pooling #1
             #l1 = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
             #l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
