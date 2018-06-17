@@ -498,7 +498,7 @@ class TripleGAN(object):
             if epoch >= self.decay_epoch:
                 lr_d *= 0.995
                 lr_g *= 0.995
-                lr_c *= 0.90
+                lr_c *= 0.99
                 print("**** learning rate DECAY ****")
                 print("lr_d is now: %.3g" % lr_d)
                 print("lr_g is now: %.3g" % lr_g)
