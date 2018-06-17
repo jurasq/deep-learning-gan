@@ -14,8 +14,8 @@ def check_folder(log_dir):
     return log_dir
 
 def save_sequences(sequences, filepath):
-    with open(filepath, "w") as f:
-        f.write("\n".join(sequences))
+    with open(filepath, "wb") as f:
+        f.write(b"\n".join(sequences))
 
 
 def imsave(images, size, path):
