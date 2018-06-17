@@ -73,21 +73,23 @@ def conv_layer(name_scope, input_tensor, num_kernels, kernel_shape,
     """
     name_suffix = name_suffix if name_suffix else ""
 
-    #E.g. batch_size x 500x4x1 for the first input
-    input_shape = input_tensor.get_shape().as_list()
-    input_channels = input_shape[-1]
+    #E.g. batch_size x 4 x 500 x 1 for the first input
+    # 2nd layer: batch_size x 1 x 492 x 20
+    # input_shape = input_tensor.get_shape().as_list()
+    # input_channels = input_shape[-1]
 
     with tf.name_scope(name_scope):
 
-        weights_shape = kernel_shape + [input_channels, num_kernels]
-        init_vals_weights = tf.truncated_normal(weights_shape, stddev=math.sqrt(2 / float(input_channels)))
-        filter_weights = tf.Variable(init_vals_weights, name='weights'+name_suffix)
+        # weights_shape = kernel_shape + [input_channels, num_kernels]
+        # init_vals_weights = tf.truncated_normal(weights_shape, stddev=math.sqrt(2 / float(input_channels)))
+        # filter_weights = tf.Variable(init_vals_weights, name='weights'+name_suffix)
 
 
-        biases = tf.Variable(tf.constant(0.1, shape=[num_kernels]), name='biases'+name_suffix)
+        # biases = tf.Variable(tf.constant(0.1, shape=[num_kernels]), name='biases'+name_suffix)
 
         #Define a convolutional layer
-        layer = tf.nn.conv2d(input_tensor, filter_weights, strides=[1, stride, stride, 1], padding=padding) + biases
+        # layer = tf.nn.conv2d(input_tensor, filter_weights, strides=[1, stride, stride, 1], padding=padding) + biases
+        layer = tf.layers.conv2d(inputs=input_tensor, filters=num_kernels, kernel_size=kernel_shape, strides=[1, stride, stride, 1], padding=padding)
 
         #Add batch normalisation if specified
         if batch_norm:
