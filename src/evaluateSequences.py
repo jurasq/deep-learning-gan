@@ -25,7 +25,7 @@ def decode_dna_matrices(sequences):
         for i in range(seq_shape[0]):
             values[i,:] = seq[i].reshape(seq_shape[1])
         values_df = pd.DataFrame(values).T
-        values_df.columns = ['A','C','T','G']
+        values_df.columns = ['A','C','G','T']
         x=values_df.stack()
         decoded_sequence=x[x!=0].index.get_level_values(1).tolist()
         decoded_sequences [ind,:] = decoded_sequence
@@ -58,13 +58,20 @@ def edit_dist(s1,s2):
 #computes the edit distances between the sequences belonging to two sets
 #input:two sets of sequences in encoded form (matrix representation)
 #output ; array with all the computed edit distances between the sequences in these sets (between-group distances)
-def pairwise_edit_distances (train_sequences,test_sequences):
-    print ("Decoding seq 1")
-    dec_tr_seq = decode_dna_matrices(train_sequences)
-    print ("Decoding seq 2")
-    dec_tst_seq = decode_dna_matrices(test_sequences)
-    nr_tr= train_sequences.shape[0]
-    nr_tst=test_sequences.shape[0]
+def pairwise_edit_distances (train_sequences,test_sequences,decoding=True):
+    if decoding==True:
+        print ("Decoding seq 1")
+        dec_tr_seq = decode_dna_matrices(train_sequences)
+        print ("Decoding seq 2")
+        dec_tst_seq = decode_dna_matrices(test_sequences)
+        nr_tr= train_sequences.shape[0]
+        nr_tst=test_sequences.shape[0]
+    else:
+        dec_tr_seq = train_sequences
+        dec_tst_seq = test_sequences
+        nr_tr= len(train_sequences)
+        nr_tst=len(test_sequences)
+        
     edit_distances = np.zeros(nr_tr*nr_tst)
     n_id = 0
     print ("Computing distances")
