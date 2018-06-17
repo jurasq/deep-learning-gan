@@ -209,19 +209,19 @@ class TripleGAN(object):
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # convolutional + pooling #1
-            l1 = lrelu(conv_layer_original(x, filter_size=20,
+            #l1 = lrelu(conv_layer_original(x, filter_size=20,
                                            kernel=[4, 9]))
-            #l1 = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
+            l1 = conv_max_forward_reverse(name_scope="convolutional_1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True)
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3], padding="VALID")
 
             # convolutional + pooling #2
-            l3 = lrelu(conv_layer_original(l2, filter_size=30, kernel=[1, 5]))
-            #l3 = conv_layer(name_scope="convolutional_2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5])
+            #l3 = lrelu(conv_layer_original(l2, filter_size=30, kernel=[1, 5]))
+            l3 = conv_layer(name_scope="convolutional_2", input_tensor=l2, num_kernels=30, kernel_shape=[1, 5])
             l4 = max_pool_layer(name_scope="pool2", input_tensor=l3, pool_size=[1, 4], padding="VALID")
 
             # convolutional + pooling #3
-            l5 = lrelu(conv_layer_original(l4, filter_size=40, kernel=[1, 3]))
-            #l5 = conv_layer(name_scope="convolutional_3", input_tensor=l4, num_kernels=30, kernel_shape=[1, 5])
+            #l5 = lrelu(conv_layer_original(l4, filter_size=40, kernel=[1, 3]))
+            l5 = conv_layer(name_scope="convolutional_3", input_tensor=l4, num_kernels=30, kernel_shape=[1, 5])
             l6 = max_pool_layer(name_scope="pool3", input_tensor=l5, pool_size=[1, 4], padding="VALID")
 
             flat = flatten(l6)
