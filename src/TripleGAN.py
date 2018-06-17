@@ -206,10 +206,10 @@ class TripleGAN(object):
             flat = flatten(l6)
             # fully connected layers
             l7 = tf.layers.dense(inputs=flat, units=90)
-            l7 = tf.nn.relu(l7)
+            l7 = tf.nn.leaky_relu(l7)
             l7 = tf.layers.dropout(l7, rate=0.15, training=is_training)
             l8 = tf.layers.dense(inputs=l7, units=45)
-            l8 = tf.nn.relu(l8)
+            l8 = tf.nn.leaky_relu(l8)
             logits = tf.layers.dense(inputs=l8, units=2)
 
 
