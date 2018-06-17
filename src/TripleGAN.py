@@ -57,7 +57,7 @@ class TripleGAN(object):
 
         print("Initializing TripleGAN with lr_d=%.3g, lr_g=%.3g, lr_c=%.3g" % (self.lr_d, self.lr_g, self.lr_c))
 
-        
+
     def init_data(self, nexamples):
         print("Running TripleGAN, so loading both positive and negative samples...")
         return dna.prepare_data(
@@ -98,7 +98,7 @@ class TripleGAN(object):
         with tf.variable_scope(scope, reuse=reuse):
             noise_vector = concat([noise_vector, y_])
             y = tf.reshape(y_, [-1, 1, 1, self.y_dim])
-            
+
             batch_size = tf.cast(noise_vector.shape[0], dtype=tf.int32)
             g_dim = 64  # Number of filters of first layer of generator
             c_dim = 1  # dimensionality of the output
@@ -117,7 +117,7 @@ class TripleGAN(object):
             output_mlp = tf.layers.dense(inputs=noise_vector, units=int(width / 4) * (s16 + 1) * magic_number)
 
             h0 = tf.reshape(output_mlp, [batch_size, int(width / 4), s16 + 1, magic_number])
-            h0 = tf.nn.leaky_relu(h0)
+            h0 = lrelu(h0)
             # Dimensions of h0 = batch_size x 1 x 31 x magic_number
             h0 = conv_concat(h0, y)
 
@@ -132,9 +132,8 @@ class TripleGAN(object):
                                              strides=[1, 2, 2, 1], padding='SAME', name="H_conv1") + b_conv1
             H_conv1 = tf.contrib.layers.batch_norm(inputs=H_conv1, center=True, scale=True, is_training=is_training,
                                                    scope="g_bn1")
-            H_conv1 = tf.nn.leaky_relu(H_conv1)
+            H_conv1 = lrelu(H_conv1)
 
-                 
             # Dimensions of H_conv1 = batch_size x 1 x 62 x 256
             H_conv1 = conv_concat(H_conv1, y)
 
@@ -147,10 +146,9 @@ class TripleGAN(object):
                                              strides=[1, 1, 2, 1], padding='SAME') + b_conv2
             H_conv2 = tf.contrib.layers.batch_norm(inputs=H_conv2, center=True, scale=True, is_training=True,
                                                    scope="g_bn2")
-            H_conv2 = tf.nn.relu(H_conv2)
+            H_conv2 = lrelu(H_conv2)
             # Dimensions of H_conv2 = batch_size x 2 x 124 x 128
             H_conv2 = conv_concat(H_conv2, y)
-
 
             # Third DeConv Layer
             output3_shape = [batch_size, int(width), s2, g_dim * 1]
@@ -161,10 +159,9 @@ class TripleGAN(object):
                                              strides=[1, 2, 2, 1], padding='SAME') + b_conv3
             H_conv3 = tf.contrib.layers.batch_norm(inputs=H_conv3, center=True, scale=True, is_training=True,
                                                    scope="g_bn3")
-            H_conv3 = tf.nn.leaky_relu(H_conv3)
+            H_conv3 = lrelu(H_conv3)
             # Dimensions of H_conv3 = batch_size x 4 x 248 x 64
             H_conv3 = conv_concat(H_conv3, y)
-
 
             # Fourth DeConv Layer
             output4_shape = [batch_size, int(width), s, c_dim]
@@ -174,8 +171,8 @@ class TripleGAN(object):
             H_conv4 = tf.nn.conv2d_transpose(H_conv3, W_conv4, output_shape=output4_shape,
                                              strides=[1, 1, 2, 1], padding='VALID') + b_conv4
             #         H_conv4 = tf.nn.tanh(H_conv4)
-            # print('trung to se what to concat H_conv4', H_conv4.get_shape())  
-            # print('trung to se what to concat y', y.get_shape())  
+            # print('trung to se what to concat H_conv4', H_conv4.get_shape())
+            # print('trung to se what to concat y', y.get_shape())
             # H_conv4 = conv_concat(H_conv4, y)
 
             # print('post shape', H_conv4.get_shape())
@@ -190,9 +187,9 @@ class TripleGAN(object):
     def classifier(self, x, scope='classifier', is_training=True, reuse=False):
         with tf.variable_scope(scope, reuse=reuse):
             # convolutional + pooling #1
-            l1 = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
+            #l1 = lrelu(conv_layer_original(x, filter_size=20, kernel=[4, 9]))
             #l1 = conv_max_forward_reverse(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
-            # l1 = conv_max_forward_reverse_test(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
+            l1 = conv_max_forward_reverse_test(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
             #l1 = conv_layer(name_scope="conv1", input_tensor=x, num_kernels=20, kernel_shape=[4, 9], relu=True, lrelu=True)
 
             l2 = max_pool_layer(name_scope="pool1", input_tensor=l1, pool_size=[1, 3], padding="VALID")
@@ -226,7 +223,6 @@ class TripleGAN(object):
         self.tf_lr_d = tf.placeholder(tf.float32, name='lr_d')
         self.tf_lr_g = tf.placeholder(tf.float32, name='lr_g')
         self.tf_lr_c = tf.placeholder(tf.float32, name='lr_c')
-
 
         """ Graph Input """
         # Train sequences + labels, shape: [batch_size, 4, 500, 1], [batch_size, 2]
@@ -343,7 +339,6 @@ class TripleGAN(object):
         negative_example_labels = np.concatenate([np.ones((self.generated_batch_size, 1)), np.zeros((self.generated_batch_size, 1))], axis=1)
         positive_example_labels = np.concatenate([np.zeros((self.generated_batch_size, 1)), np.ones((self.generated_batch_size, 1))], axis=1)
 
-
         # saver to save model
         self.saver = tf.train.Saver()
 
@@ -376,6 +371,10 @@ class TripleGAN(object):
         start_time = time.time()
 
         for epoch in range(start_epoch, self.epoch):
+            #Shuffle data
+            indices = np.random.permutation(len(self.data_X))
+            self.data_X = self.data_X[indices]
+            self.data_y = self.data_y[indices]
 
             lr_d, lr_g, lr_c = self.update_learning_rates(epoch, lr_d=lr_d, lr_g=lr_g, lr_c = lr_c)
 
@@ -384,7 +383,7 @@ class TripleGAN(object):
                 batch_sequences = self.data_X[idx * self.batch_size: (idx + 1) * self.batch_size]
                 batch_labels = self.data_y[idx * self.batch_size : (idx + 1) * self.batch_size]
                 batch_z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
-                
+
                 feed_dict = {
                     self.inputs: batch_sequences,
                     self.y: batch_labels,
@@ -476,13 +475,11 @@ class TripleGAN(object):
                 self.full_test_dataset: self.test_X,
                 self.full_test_dataset_labels: self.test_y
             })
-            print("AUC")
-            print(auc)
 
         summary_test = tf.Summary(value=[tf.Summary.Value(tag='test_accuracy', simple_value=test_acc)])
         self.writer.add_summary(summary_test, epoch)
 
-        line = "Epoch: [%2d], test_acc: %.4f\n" % (epoch, test_acc)
+        line = "Epoch: [%2d], test_acc: %.4f, AUC: (%.4f, %.4f)\n" % (epoch, test_acc, auc[0], auc[1])
         print(line)
         with open(self.get_files_location('accuracy.txt'), 'a') as f:
             f.write(line)
