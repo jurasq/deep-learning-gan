@@ -27,7 +27,7 @@ seq_dir = sys.argv[1]
 outputName=sys.argv[2]
 #should be somehing like "negative"
 
-epfiles = ['results/TripleGAN_dna_100_200/'+filename for filename in os.listdir('results/TripleGAN_dna_100_200/') if filename.startswith(seq_dir) and (filename.endswith('00.txt') or filename.endswith('10.txt') or filename.endswith('20.txt'))]
+epfiles = ['results/TripleGAN_dna_100_200/'+filename for filename in os.listdir('results/TripleGAN_dna_100_200/') if filename.startswith(seq_dir) and (filename.endswith('30.txt') or filename.endswith('40.txt') or filename.endswith('50.txt'))]
 epfiles=np.sort(epfiles)
 print(epfiles)
 
